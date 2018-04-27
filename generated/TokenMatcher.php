@@ -68,13 +68,21 @@ class TokenMatcher extends TokenMatcherTemplate
             $context->getBuffer()->nextSymbol();
             goto state9;
         }
-        if (0x6E == $char) {
+        if (0x65 == $char) {
             $context->getBuffer()->nextSymbol();
             goto state10;
         }
-        if (0x74 == $char) {
+        if (0x45 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto state10;
+        }
+        if (0x6E == $char) {
             $context->getBuffer()->nextSymbol();
             goto state11;
+        }
+        if (0x74 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto state12;
         }
         if (0x2E == $char) {
             $context->getBuffer()->nextSymbol();
@@ -86,11 +94,6 @@ class TokenMatcher extends TokenMatcherTemplate
             $context
                 ->setNewToken(TokenType::DIGIT_1_9)
                 ->setTokenAttribute('json.text', $context->getSymbolString());
-            return true;
-        }
-        if (0x45 == $char) {
-            $context->getBuffer()->nextSymbol();
-            $context->setNewToken(TokenType::E);
             return true;
         }
         if (0x2D == $char) {
@@ -142,6 +145,10 @@ class TokenMatcher extends TokenMatcherTemplate
         goto error;
 
         state10:
+        $context->setNewToken(TokenType::E);
+        return true;
+
+        state11:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
@@ -152,7 +159,7 @@ class TokenMatcher extends TokenMatcherTemplate
         }
         goto error;
 
-        state11:
+        state12:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
@@ -370,6 +377,14 @@ class TokenMatcher extends TokenMatcherTemplate
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
+        if (0x62 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc11;
+        }
+        if (0x66 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc11;
+        }
         if (0x30 <= $char && $char <= 0x39 ||
             0x41 <= $char && $char <= 0x46 ||
             0x61 == $char ||
@@ -385,6 +400,14 @@ class TokenMatcher extends TokenMatcherTemplate
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
+        if (0x62 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc12;
+        }
+        if (0x66 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc12;
+        }
         if (0x30 <= $char && $char <= 0x39 ||
             0x41 <= $char && $char <= 0x46 ||
             0x61 == $char ||
@@ -400,6 +423,14 @@ class TokenMatcher extends TokenMatcherTemplate
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
+        if (0x62 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc13;
+        }
+        if (0x66 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc13;
+        }
         if (0x30 <= $char && $char <= 0x39 ||
             0x41 <= $char && $char <= 0x46 ||
             0x61 == $char ||
@@ -415,19 +446,30 @@ class TokenMatcher extends TokenMatcherTemplate
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
+        if (0x62 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc14;
+        }
+        if (0x66 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc14;
+        }
         if (0x30 <= $char && $char <= 0x39 ||
             0x41 <= $char && $char <= 0x46 ||
             0x61 == $char ||
             0x63 <= $char && $char <= 0x65
         ) {
             $context->getBuffer()->nextSymbol();
-            $context
-                ->setNewToken(TokenType::HEX)
-                ->setTokenAttribute('json.text', $context->getSymbolString())
-                ->setContext('string');
-            return true;
+            goto stateStringEsc14;
         }
         goto error;
+
+        stateStringEsc14:
+        $context
+            ->setNewToken(TokenType::HEX)
+            ->setTokenAttribute('json.text', $context->getSymbolString())
+            ->setContext('string');
+        return true;
 
         error:
         return false;
