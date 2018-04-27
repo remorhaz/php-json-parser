@@ -8,6 +8,7 @@ namespace Remorhaz\JSON\Parser;
 
 use Remorhaz\UniLex\IO\CharBufferInterface;
 use Remorhaz\UniLex\Lexer\TokenFactoryInterface;
+use Remorhaz\UniLex\Lexer\TokenMatcherInterface;
 use Remorhaz\UniLex\Lexer\TokenMatcherTemplate;
 
 class TokenMatcher extends TokenMatcherTemplate
@@ -16,6 +17,12 @@ class TokenMatcher extends TokenMatcherTemplate
     public function match(CharBufferInterface $buffer, TokenFactoryInterface $tokenFactory): bool
     {
         $context = $this->createContext($buffer, $tokenFactory);
+        if ($context->getContext() == 'string') {
+            goto stateString1;
+        }
+        if ($context->getContext() == 'stringEsc') {
+            goto stateStringEsc1;
+        }
         goto state1;
 
         state1:
@@ -76,7 +83,9 @@ class TokenMatcher extends TokenMatcherTemplate
         }
         if (0x31 <= $char && $char <= 0x39) {
             $context->getBuffer()->nextSymbol();
-            $context->setNewToken(TokenType::DIGIT_1_9);
+            $context
+                ->setNewToken(TokenType::DIGIT_1_9)
+                ->setTokenAttribute('json.text', $context->getSymbolString());
             return true;
         }
         if (0x45 == $char) {
@@ -101,8 +110,9 @@ class TokenMatcher extends TokenMatcherTemplate
         }
         if (0x22 == $char) {
             $context->getBuffer()->nextSymbol();
-            $context->setNewToken(TokenType::QUOTATION_MARK);
-            // context -> string
+            $context
+                ->setNewToken(TokenType::QUOTATION_MARK)
+                ->setContext('stringEsc');
             return true;
         }
         goto error;
@@ -229,6 +239,192 @@ class TokenMatcher extends TokenMatcherTemplate
         if (0x65 == $char) {
             $context->getBuffer()->nextSymbol();
             $context->setNewToken(TokenType::FALSE);
+            return true;
+        }
+        goto error;
+
+        stateString1:
+        if ($context->getBuffer()->isEnd()) {
+            goto error;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x22 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::QUOTATION_MARK)
+                ->setContext(TokenMatcherInterface::DEFAULT_CONTEXT);
+            return true;
+        }
+        if (0x5C == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::ESCAPE)
+                ->setContext('stringEsc');
+            return true;
+        }
+        if (0x20 == $char || 0x21 == $char || 0x23 <= $char && $char <= 0x5B || 0x5D <= $char && $char <= 0x10FFFF) {
+            $context->getBuffer()->nextSymbol();
+            goto stateString4;
+        }
+        goto error;
+
+        stateString4:
+        if ($context->getBuffer()->isEnd()) {
+            goto finishString4;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x20 == $char || 0x21 == $char || 0x23 <= $char && $char <= 0x5B || 0x5D <= $char && $char <= 0x10FFFF) {
+            $context->getBuffer()->nextSymbol();
+            goto stateString5;
+        }
+        finishString4:
+        $context
+            ->setNewToken(TokenType::UNESCAPED)
+            ->setTokenAttribute('json.text', $context->getSymbolString());
+        return true;
+
+        stateString5:
+        if ($context->getBuffer()->isEnd()) {
+            goto finishString5;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x20 == $char || 0x21 == $char || 0x23 <= $char && $char <= 0x5B || 0x5D <= $char && $char <= 0x10FFFF) {
+            $context->getBuffer()->nextSymbol();
+            goto stateString5;
+        }
+        finishString5:
+        $context
+            ->setNewToken(TokenType::UNESCAPED)
+            ->setTokenAttribute('json.text', $context->getSymbolString());
+        return true;
+
+        stateStringEsc1:
+        if ($context->getBuffer()->isEnd()) {
+            goto error;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x22 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::QUOTATION_MARK)
+                ->setContext('string');
+            return true;
+        }
+        if (0x5C == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::REVERSE_SOLIDUS)
+                ->setContext('string');
+            return true;
+        }
+        if (0x2F == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::SOLIDUS)
+                ->setContext('string');
+            return true;
+        }
+        if (0x62 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::BACKSPACE)
+                ->setContext('string');
+            return true;
+        }
+        if (0x66 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::FORM_FEED)
+                ->setContext('string');
+            return true;
+        }
+        if (0x6E == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::LINE_FEED)
+                ->setContext('string');
+            return true;
+        }
+        if (0x72 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::CARRIAGE_RETURN)
+                ->setContext('string');
+            return true;
+        }
+        if (0x74 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::TAB)
+                ->setContext('string');
+            return true;
+        }
+        if (0x75 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc10;
+        }
+        goto error;
+
+        stateStringEsc10:
+        if ($context->getBuffer()->isEnd()) {
+            goto error;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x30 <= $char && $char <= 0x39 ||
+            0x41 <= $char && $char <= 0x46 ||
+            0x61 == $char ||
+            0x63 <= $char && $char <= 0x65
+        ) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc11;
+        }
+        goto error;
+
+        stateStringEsc11:
+        if ($context->getBuffer()->isEnd()) {
+            goto error;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x30 <= $char && $char <= 0x39 ||
+            0x41 <= $char && $char <= 0x46 ||
+            0x61 == $char ||
+            0x63 <= $char && $char <= 0x65
+        ) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc12;
+        }
+        goto error;
+
+        stateStringEsc12:
+        if ($context->getBuffer()->isEnd()) {
+            goto error;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x30 <= $char && $char <= 0x39 ||
+            0x41 <= $char && $char <= 0x46 ||
+            0x61 == $char ||
+            0x63 <= $char && $char <= 0x65
+        ) {
+            $context->getBuffer()->nextSymbol();
+            goto stateStringEsc13;
+        }
+        goto error;
+
+        stateStringEsc13:
+        if ($context->getBuffer()->isEnd()) {
+            goto error;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x30 <= $char && $char <= 0x39 ||
+            0x41 <= $char && $char <= 0x46 ||
+            0x61 == $char ||
+            0x63 <= $char && $char <= 0x65
+        ) {
+            $context->getBuffer()->nextSymbol();
+            $context
+                ->setNewToken(TokenType::HEX)
+                ->setTokenAttribute('json.text', $context->getSymbolString())
+                ->setContext('string');
             return true;
         }
         goto error;
