@@ -47,10 +47,11 @@ $context->setNewToken(TokenType::TRUE);
 /** @lexToken /\x2E/ */
 $context->setNewToken(TokenType::DECIMAL_POINT);
 
-/** @lexToken /[\x31-\x39]/ */
+/** @lexToken /([\x31-\x39][\x30-\x39]*)/ */
 $context
     ->setNewToken(TokenType::DIGIT_1_9)
-    ->setTokenAttribute('json.text', $context->getSymbolString());
+    ->setTokenAttribute('json.text', $context->getSymbolString())
+    ->setTokenAttribute('json.data', $context->getSymbolList());
 
 /** @lexToken /[\x65\x45]/ */
 $context->setNewToken(TokenType::E);
@@ -67,7 +68,7 @@ $context->setNewToken(TokenType::ZERO);
 /** @lexToken /\x22/ */
 $context
     ->setNewToken(TokenType::QUOTATION_MARK)
-    ->setContext('stringEsc');
+    ->setContext('string');
 
 /**
  * @lexContext string

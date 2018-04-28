@@ -91,9 +91,11 @@ class TokenMatcher extends TokenMatcherTemplate
         }
         if (0x31 <= $char && $char <= 0x39) {
             $context->getBuffer()->nextSymbol();
-            $context
-                ->setNewToken(TokenType::DIGIT_1_9)
-                ->setTokenAttribute('json.text', $context->getSymbolString());
+            goto state14;
+        }
+        if (0x30 == $char) {
+            $context->getBuffer()->nextSymbol();
+            $context->setNewToken(TokenType::ZERO);
             return true;
         }
         if (0x2D == $char) {
@@ -106,16 +108,11 @@ class TokenMatcher extends TokenMatcherTemplate
             $context->setNewToken(TokenType::PLUS);
             return true;
         }
-        if (0x30 == $char) {
-            $context->getBuffer()->nextSymbol();
-            $context->setNewToken(TokenType::ZERO);
-            return true;
-        }
         if (0x22 == $char) {
             $context->getBuffer()->nextSymbol();
             $context
                 ->setNewToken(TokenType::QUOTATION_MARK)
-                ->setContext('stringEsc');
+                ->setContext('string');
             return true;
         }
         goto error;
@@ -140,7 +137,7 @@ class TokenMatcher extends TokenMatcherTemplate
         $char = $context->getBuffer()->getSymbol();
         if (0x61 == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state25;
+            goto state26;
         }
         goto error;
 
@@ -155,7 +152,7 @@ class TokenMatcher extends TokenMatcherTemplate
         $char = $context->getBuffer()->getSymbol();
         if (0x75 == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state22;
+            goto state23;
         }
         goto error;
 
@@ -166,22 +163,62 @@ class TokenMatcher extends TokenMatcherTemplate
         $char = $context->getBuffer()->getSymbol();
         if (0x72 == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state19;
+            goto state20;
         }
         goto error;
 
+        state14:
+        if ($context->getBuffer()->isEnd()) {
+            goto finish14;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x31 <= $char && $char <= 0x39) {
+            $context->getBuffer()->nextSymbol();
+            goto state19;
+        }
+        if (0x30 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto state19;
+        }
+        finish14:
+        $context
+            ->setNewToken(TokenType::DIGIT_1_9)
+            ->setTokenAttribute('json.text', $context->getSymbolString())
+            ->setTokenAttribute('json.data', $context->getSymbolList());
+        return true;
+
         state19:
+        if ($context->getBuffer()->isEnd()) {
+            goto finish19;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x31 <= $char && $char <= 0x39) {
+            $context->getBuffer()->nextSymbol();
+            goto state19;
+        }
+        if (0x30 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto state19;
+        }
+        finish19:
+        $context
+            ->setNewToken(TokenType::DIGIT_1_9)
+            ->setTokenAttribute('json.text', $context->getSymbolString())
+            ->setTokenAttribute('json.data', $context->getSymbolList());
+        return true;
+
+        state20:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
         if (0x75 == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state20;
+            goto state21;
         }
         goto error;
 
-        state20:
+        state21:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
@@ -193,18 +230,18 @@ class TokenMatcher extends TokenMatcherTemplate
         }
         goto error;
 
-        state22:
+        state23:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
         if (0x6C == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state23;
+            goto state24;
         }
         goto error;
 
-        state23:
+        state24:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
@@ -216,29 +253,29 @@ class TokenMatcher extends TokenMatcherTemplate
         }
         goto error;
 
-        state25:
+        state26:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
         if (0x6C == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state26;
+            goto state27;
         }
         goto error;
 
-        state26:
+        state27:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
         $char = $context->getBuffer()->getSymbol();
         if (0x73 == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state27;
+            goto state28;
         }
         goto error;
 
-        state27:
+        state28:
         if ($context->getBuffer()->isEnd()) {
             goto error;
         }
