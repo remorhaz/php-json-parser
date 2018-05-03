@@ -129,7 +129,7 @@ class TokenMatcher extends TokenMatcherTemplate
         $char = $context->getBuffer()->getSymbol();
         if (0x09 == $char || 0x0A == $char || 0x0D == $char || 0x20 == $char) {
             $context->getBuffer()->nextSymbol();
-            goto state8;
+            goto state30;
         }
         finish8:
         $context->setNewToken(TokenType::WS);
@@ -291,6 +291,19 @@ class TokenMatcher extends TokenMatcherTemplate
             return true;
         }
         goto error;
+
+        state30:
+        if ($context->getBuffer()->isEnd()) {
+            goto finish30;
+        }
+        $char = $context->getBuffer()->getSymbol();
+        if (0x09 == $char || 0x0A == $char || 0x0D == $char || 0x20 == $char) {
+            $context->getBuffer()->nextSymbol();
+            goto state30;
+        }
+        finish30:
+        $context->setNewToken(TokenType::WS);
+        return true;
 
         stateString1:
         if ($context->getBuffer()->isEnd()) {

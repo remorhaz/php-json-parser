@@ -32,7 +32,7 @@ $context->setNewToken(TokenType::COLON);
 /** @lexToken /\x2C/ */
 $context->setNewToken(TokenType::COMMA);
 
-/** @lexToken /[\x20\x09\x0A\x0D]*()/ */
+/** @lexToken /[\x20\x09\x0A\x0D]+/ */
 $context->setNewToken(TokenType::WS);
 
 /** @lexToken /\x66\x61\x6C\x73\x65/ */
