@@ -33,10 +33,6 @@ class LexerTest extends TestCase
             if ($token->isEoi()) {
                 break;
             }
-            if ($token->getType() == TokenType::DIGIT_1_9) {
-                var_dump($token->getAttribute('json.text'));
-                var_dump($token->getAttribute('json.data'));
-            }
             $tokenTypeList[] = $token->getType();
         } while (true);
         self::assertSame($expectedValue, $tokenTypeList);
@@ -88,7 +84,7 @@ class LexerTest extends TestCase
                 ],
             ],
             "Negative number with exponential part" => [
-                '-2.3e+45',
+                '-2.3e+0405',
                 [
                     TokenType::MINUS,
                     TokenType::DIGIT_1_9,
@@ -96,7 +92,22 @@ class LexerTest extends TestCase
                     TokenType::DIGIT_1_9,
                     TokenType::E,
                     TokenType::PLUS,
+                    TokenType::ZERO,
                     TokenType::DIGIT_1_9,
+                ],
+            ],
+            "String with escaped symbols" => [
+                '"ab\bc\u0061d"',
+                [
+                    TokenType::QUOTATION_MARK,
+                    TokenType::UNESCAPED,
+                    TokenType::ESCAPE,
+                    TokenType::BACKSPACE,
+                    TokenType::UNESCAPED,
+                    TokenType::ESCAPE,
+                    TokenType::HEX,
+                    TokenType::UNESCAPED,
+                    TokenType::QUOTATION_MARK,
                 ],
             ],
         ];
