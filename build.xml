@@ -2,17 +2,27 @@
 
 <project name="unilex" basedir="." default="all">
     <taskdef classname="vendor.remorhaz.php-unilex.phing.BuildTokenMatcher" name="build-lexer" />
+    <taskdef classname="vendor.remorhaz.php-unilex.phing.BuildLl1LookupTable" name="build-ll1-lookup-table" />
 
-    <target name="all" depends="prepare-dir,json-matcher"/>
+    <target name="all" depends="prepare-dir,json-token-matcher,json-parser-lookup"/>
 
     <target name="prepare-dir" description="Prepares build directory">
         <mkdir dir="${application.startdir}/build/logs"/>
     </target>
 
-    <target name="json-matcher" description="JSON token matcher">
+    <target name="json-token-matcher" description="Build JSON token matcher">
         <build-lexer
             description="JSON token matcher."
             sourceFile="${application.startdir}/spec/LexerSpec.php"
             destFile="${application.startdir}/generated/TokenMatcher.php" />
+    </target>
+
+    <target name="json-parser-lookup" description="Build JSON parser LL(1) lookup table">
+        <build-ll1-lookup-table
+            description="JSON parser LL(1) lookup table."
+            symbolClassName="Remorhaz\JSON\Parser\SymbolType"
+            tokenClassName="Remorhaz\JSON\Parser\TokenType"
+            configFile="${application.startdir}/spec/GrammarSpec.php"
+            destFile="${application.startdir}/generated/LookupTable.php" />
     </target>
 </project>

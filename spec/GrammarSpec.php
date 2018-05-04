@@ -7,7 +7,7 @@ use Remorhaz\UniLex\Grammar\ContextFree\GrammarLoader;
 return [
     GrammarLoader::ROOT_SYMBOL_KEY => SymbolType::NT_ROOT,
     GrammarLoader::EOI_SYMBOL_KEY => SymbolType::T_EOI,
-    GrammarLoader::START_SYMBOL_KEY => SymbolType::NT_VALUE_WS,
+    GrammarLoader::START_SYMBOL_KEY => SymbolType::NT_JSON,
 
     GrammarLoader::TOKEN_MAP_KEY => [
         SymbolType::T_LEFT_SQUARE_BRACKET => TokenType::LEFT_SQUARE_BRACKET,
@@ -42,10 +42,10 @@ return [
 
     GrammarLoader::PRODUCTION_MAP_KEY => [
         SymbolType::NT_ROOT => [
-            [SymbolType::NT_WS, SymbolType::NT_VALUE_WS, SymbolType::T_EOI],
+            [SymbolType::NT_JSON, SymbolType::T_EOI],
         ],
-        SymbolType::NT_VALUE_WS => [
-            [SymbolType::NT_VALUE, SymbolType::NT_WS],
+        SymbolType::NT_JSON => [
+            [SymbolType::NT_WS, SymbolType::NT_VALUE, SymbolType::NT_WS],
         ],
         SymbolType::NT_WS => [
             [SymbolType::T_WS],
@@ -61,49 +61,52 @@ return [
             [SymbolType::NT_STRING],
         ],
         SymbolType::NT_OBJECT => [
-            [SymbolType::NT_BEGIN_OBJECT, SymbolType::NT_OBJECT_MEMBERS, SymbolType::NT_END_OBJECT],
-        ],
-        SymbolType::NT_BEGIN_OBJECT => [
-            [SymbolType::T_LEFT_CURLY_BRACKET, SymbolType::NT_WS],
+            [
+                SymbolType::T_LEFT_CURLY_BRACKET,
+                SymbolType::NT_WS,
+                SymbolType::NT_OBJECT_MEMBERS,
+                SymbolType::T_RIGHT_CURLY_BRACKET,
+            ],
         ],
         SymbolType::NT_OBJECT_MEMBERS => [
             [SymbolType::NT_OBJECT_MEMBER, SymbolType::NT_NEXT_OBJECT_MEMBERS],
             [],
         ],
         SymbolType::NT_OBJECT_MEMBER => [
-            [SymbolType::NT_STRING, SymbolType::NT_NAME_SEPARATOR, SymbolType::NT_VALUE_WS],
-        ],
-        SymbolType::NT_NAME_SEPARATOR => [
-            [SymbolType::NT_WS, SymbolType::T_COLON, SymbolType::NT_WS],
+            [
+                SymbolType::NT_STRING,
+                SymbolType::NT_WS,
+                SymbolType::T_COLON,
+                SymbolType::NT_WS,
+                SymbolType::NT_VALUE,
+                SymbolType::NT_WS,
+            ],
         ],
         SymbolType::NT_NEXT_OBJECT_MEMBERS => [
-            [SymbolType::NT_VALUE_SEPARATOR, SymbolType::NT_OBJECT_MEMBER, SymbolType::NT_NEXT_OBJECT_MEMBERS],
-            [SymbolType::NT_WS],
+            [SymbolType::T_COMMA, SymbolType::NT_WS, SymbolType::NT_OBJECT_MEMBER, SymbolType::NT_NEXT_OBJECT_MEMBERS],
             [],
         ],
-        SymbolType::NT_VALUE_SEPARATOR => [
-            [SymbolType::T_COMMA, SymbolType::NT_WS],
-        ],
-        SymbolType::NT_END_OBJECT => [
-            [SymbolType::T_RIGHT_CURLY_BRACKET],
-        ],
         SymbolType::NT_ARRAY => [
-            [SymbolType::NT_BEGIN_ARRAY, SymbolType::NT_ARRAY_VALUES, SymbolType::NT_END_ARRAY],
-        ],
-        SymbolType::NT_BEGIN_ARRAY => [
-            [SymbolType::T_LEFT_SQUARE_BRACKET, SymbolType::NT_WS],
+            [
+                SymbolType::T_LEFT_SQUARE_BRACKET,
+                SymbolType::NT_WS,
+                SymbolType::NT_ARRAY_VALUES,
+                SymbolType::T_RIGHT_SQUARE_BRACKET,
+            ],
         ],
         SymbolType::NT_ARRAY_VALUES => [
-            [SymbolType::NT_VALUE_WS, SymbolType::NT_NEXT_ARRAY_VALUES],
+            [SymbolType::NT_VALUE, SymbolType::NT_WS, SymbolType::NT_NEXT_ARRAY_VALUES],
             [],
         ],
         SymbolType::NT_NEXT_ARRAY_VALUES => [
-            [SymbolType::NT_VALUE_SEPARATOR, SymbolType::NT_VALUE_WS, SymbolType::NT_NEXT_ARRAY_VALUES],
-            [SymbolType::NT_WS],
+            [
+                SymbolType::T_COMMA,
+                SymbolType::NT_WS,
+                SymbolType::NT_VALUE,
+                SymbolType::NT_WS,
+                SymbolType::NT_NEXT_ARRAY_VALUES,
+            ],
             [],
-        ],
-        SymbolType::NT_END_ARRAY => [
-            [SymbolType::T_RIGHT_SQUARE_BRACKET],
         ],
         SymbolType::NT_NUMBER => [
             [SymbolType::T_MINUS, SymbolType::NT_UNSIGNED_NUMBER],
@@ -139,6 +142,25 @@ return [
             [SymbolType::T_MINUS],
             [SymbolType::T_PLUS],
             [],
+        ],
+        SymbolType::NT_STRING => [
+            [SymbolType::T_QUOTATION_MARK, SymbolType::NT_STRING_CONTENT, SymbolType::T_QUOTATION_MARK],
+        ],
+        SymbolType::NT_STRING_CONTENT => [
+            [SymbolType::T_ESCAPE, SymbolType::NT_ESCAPED],
+            [SymbolType::T_UNESCAPED],
+            [],
+        ],
+        SymbolType::NT_ESCAPED => [
+            [SymbolType::T_QUOTATION_MARK],
+            [SymbolType::T_REVERSE_SOLIDUS],
+            [SymbolType::T_SOLIDUS],
+            [SymbolType::T_BACKSPACE],
+            [SymbolType::T_FORM_FEED],
+            [SymbolType::T_LINE_FEED],
+            [SymbolType::T_CARRIAGE_RETURN],
+            [SymbolType::T_TAB],
+            [SymbolType::T_HEX],
         ],
     ],
 ];

@@ -4,7 +4,7 @@
  *
  * Auto-generated file, please don't edit manually.
  * Run following command to update this file:
- *     vendor/bin/phing json-matcher
+ *     vendor/bin/phing json-token-matcher
  *
  * Phing version: 2.16.1
  */
