@@ -68,6 +68,7 @@ $context->setNewToken(TokenType::ZERO);
 /** @lexToken /\x22/ */
 $context
     ->setNewToken(TokenType::QUOTATION_MARK)
+    ->setTokenAttribute('json.context', TokenMatcherInterface::DEFAULT_CONTEXT)
     ->setContext('string');
 
 /**
@@ -76,6 +77,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::QUOTATION_MARK)
+    ->setTokenAttribute('json.context', 'string')
     ->setContext(TokenMatcherInterface::DEFAULT_CONTEXT);
 
 /**
@@ -92,7 +94,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::UNESCAPED)
-    ->setTokenAttribute('json.text', $context->getSymbolString());
+    ->setTokenAttribute('json.text', $context->getSymbolList());
 
 /**
  * @lexContext stringEsc
@@ -100,6 +102,8 @@ $context
  */
 $context
     ->setNewToken(TokenType::QUOTATION_MARK)
+    ->setTokenAttribute('json.context', 'stringEsc')
+    ->setTokenAttribute('json.text', [0x22])
     ->setContext('string');
 
 /**
@@ -108,6 +112,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::REVERSE_SOLIDUS)
+    ->setTokenAttribute('json.text', [0x5C])
     ->setContext('string');
 
 /**
@@ -116,6 +121,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::SOLIDUS)
+    ->setTokenAttribute('json.text', [0x2F])
     ->setContext('string');
 
 /**
@@ -124,6 +130,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::BACKSPACE)
+    ->setTokenAttribute('json.text', [0x08])
     ->setContext('string');
 
 /**
@@ -132,6 +139,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::FORM_FEED)
+    ->setTokenAttribute('json.text', [0x0C])
     ->setContext('string');
 
 /**
@@ -140,6 +148,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::LINE_FEED)
+    ->setTokenAttribute('json.text', [0x0A])
     ->setContext('string');
 
 /**
@@ -148,6 +157,7 @@ $context
  */
 $context
     ->setNewToken(TokenType::CARRIAGE_RETURN)
+    ->setTokenAttribute('json.text', [0x0D])
     ->setContext('string');
 
 /**
@@ -156,13 +166,31 @@ $context
  */
 $context
     ->setNewToken(TokenType::TAB)
+    ->setTokenAttribute('json.text', [0x09])
     ->setContext('string');
 
 /**
  * @lexContext stringEsc
  * @lexToken /\x75[\x30-\x39\x61-\x66\x41-\x46]{4}/
  */
+// Extracting hexadecimal 16-bit symbol code
+$symbolList = $context->getSymbolList();
+$symbol = 0;
+for ($i = 4; $i > 0; $i--) {
+    $power = 4 - $i;
+    $digit = $symbolList[$i];
+    if (0x30 <= $digit && $digit <= 0x39) {
+        $digit -= 0x30;
+    } elseif (0x61 <= $digit && $digit <= 0x66) {
+        $digit -= 0x51;
+    } else {
+        $digit -= 0x31;
+    }
+    $symbol += $digit * pow(0x10, $power);
+}
+$isSurrogate = 0xD800 <= $symbol && $symbol <= 0xDFFF;
 $context
     ->setNewToken(TokenType::HEX)
-    ->setTokenAttribute('json.text', $context->getSymbolString())
+    ->setTokenAttribute('json.text_char16', $symbol)
+    ->setTokenAttribute('json.text_is_utf16_surrogate', $isSurrogate)
     ->setContext('string');

@@ -97,7 +97,7 @@ class LexerTest extends TestCase
                 ],
             ],
             "String with escaped symbols" => [
-                '"ab\bc\u0061d"',
+                '"ab \bc\u0061d"',
                 [
                     TokenType::QUOTATION_MARK,
                     TokenType::UNESCAPED,

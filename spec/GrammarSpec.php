@@ -147,8 +147,8 @@ return [
             [SymbolType::T_QUOTATION_MARK, SymbolType::NT_STRING_CONTENT, SymbolType::T_QUOTATION_MARK],
         ],
         SymbolType::NT_STRING_CONTENT => [
-            [SymbolType::T_ESCAPE, SymbolType::NT_ESCAPED],
-            [SymbolType::T_UNESCAPED],
+            [SymbolType::T_ESCAPE, SymbolType::NT_ESCAPED, SymbolType::NT_STRING_CONTENT],
+            [SymbolType::T_UNESCAPED, SymbolType::NT_STRING_CONTENT],
             [],
         ],
         SymbolType::NT_ESCAPED => [
