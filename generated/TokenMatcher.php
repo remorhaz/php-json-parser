@@ -189,8 +189,7 @@ class TokenMatcher extends TokenMatcherTemplate
         finish14:
         $context
             ->setNewToken(TokenType::DIGIT_1_9)
-            ->setTokenAttribute('json.text', $context->getSymbolString())
-            ->setTokenAttribute('json.data', $context->getSymbolList());
+            ->setTokenAttribute('json.text', $context->getSymbolList());
         return true;
 
         state19:
@@ -209,8 +208,7 @@ class TokenMatcher extends TokenMatcherTemplate
         finish19:
         $context
             ->setNewToken(TokenType::DIGIT_1_9)
-            ->setTokenAttribute('json.text', $context->getSymbolString())
-            ->setTokenAttribute('json.data', $context->getSymbolList());
+            ->setTokenAttribute('json.text', $context->getSymbolList());
         return true;
 
         state20:

@@ -21,8 +21,8 @@ class TranslatorTest extends TestCase
      */
     public function testTranslator(): void
     {
-        //       0    5    10   15   20   25   30   35   40   45   50   55   60   65
-        $json = '{"a":true, "b": [0, 1, false, {"c": null, "d" : "One two \n three"} ]}';
+        //       0    5    10   15   20   25   30   35   40   45   50   55   60   65   70   75   80   85
+        $json = '{"a":true, "b": [0, -1.2e+10, false, {"c": null, "d" : "One two \n three"} ], "e":""}';
         $buffer = CharBufferFactory::createFromString($json);
         $grammar = GrammarLoader::loadFile(__DIR__ . "/../spec/GrammarSpec.php");
         $lexer = new TokenReader($buffer, new TokenMatcher, new TokenFactory($grammar));
@@ -30,6 +30,7 @@ class TranslatorTest extends TestCase
         $translator = new TranslationSchemeApplier($scheme);
         $parser = new Parser($grammar, $lexer, $translator);
         $parser->run();
+        self::assertTrue(true);
     }
 
     private function createStreamListener(): StreamListenerInterface

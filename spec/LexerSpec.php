@@ -14,7 +14,6 @@ use Remorhaz\UniLex\Lexer\TokenMatcherInterface;
  *
  * @lexToken /\x5B/
  */
-
 $context->setNewToken(TokenType::LEFT_SQUARE_BRACKET);
 
 /** @lexToken /\x7B/ */
@@ -50,8 +49,7 @@ $context->setNewToken(TokenType::DECIMAL_POINT);
 /** @lexToken /([\x31-\x39][\x30-\x39]*)/ */
 $context
     ->setNewToken(TokenType::DIGIT_1_9)
-    ->setTokenAttribute('json.text', $context->getSymbolString())
-    ->setTokenAttribute('json.data', $context->getSymbolList());
+    ->setTokenAttribute('json.text', $context->getSymbolList());
 
 /** @lexToken /[\x65\x45]/ */
 $context->setNewToken(TokenType::E);
