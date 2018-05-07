@@ -29,21 +29,22 @@ class TranslationScheme implements TranslationSchemeInterface
         $hash = "{$production->getHeader()->getSymbolId()}.{$production->getIndex()}.{$symbolIndex}";
         switch ($hash) {
             case SymbolType::NT_JSON . ".0.0":
-                var_dump("JSON open");
+                $this->listener->onBeginDocument();
                 break;
 
             case SymbolType::NT_OBJECT . ".0.1":
-                $offset = $production->getSymbol(0)->getAttribute('s.byte_offset');
-                var_dump("Object open [{$offset}]");
+                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $offset = new Offset($offsetInBytes);
+                $this->listener->onBeginObject($offset);
                 break;
 
             case SymbolType::NT_ARRAY . ".0.1":
-                $offset = $production->getSymbol(0)->getAttribute('s.byte_offset');
-                var_dump("Array open [{$offset}]");
+                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $offset = new Offset($offsetInBytes);
+                $this->listener->onBeginArray($offset);
                 break;
 
             case SymbolType::NT_STRING . ".0.1":
-                $offset = $production->getSymbol(0)->getAttribute('s.byte_offset');
                 $production->getSymbol(1)->setAttribute('i.text_prefix', []);
                 break;
 
@@ -73,17 +74,17 @@ class TranslationScheme implements TranslationSchemeInterface
                 $production->getSymbol(1)->setAttribute('i.property_index', $propertyIndex + 1);
                 break;
 
-            case SymbolType::NT_OBJECT_MEMBER . ".0.1":
-                $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
-                $offsetStart = $production->getSymbol(0)->getAttribute('s.byte_offset');
-                $length = $production->getSymbol(0)->getAttribute('s.byte_length');
-                $text = $production->getSymbol(0)->getAttribute('s.text');
-                var_dump("Property open [{$offsetStart}->{$length}, {$propertyIndex}]: {$text}");
-                break;
-
             case SymbolType::NT_OBJECT_MEMBER . ".0.4":
-                $propertyName = $production->getSymbol(0)->getAttribute('s.text');
-                var_dump("Property value open: {$propertyName}");
+                $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
+                $propertyName = $production->getSymbol(0);
+                $offsetStart = $propertyName->getAttribute('s.byte_offset');
+                $lengthInBytes = $propertyName->getAttribute('s.byte_length');
+                $text = $propertyName->getAttribute('s.text');
+                $offset = new Offset($offsetStart);
+                $length = new Length($lengthInBytes);
+                $string = new StringValue(...$text);
+                $scalar = new StringScalar($offset, $length, $string);
+                $this->listener->onBeginProperty($scalar, $propertyIndex);
                 break;
 
             case SymbolType::NT_NEXT_OBJECT_MEMBERS . ".0.2":
@@ -103,37 +104,31 @@ class TranslationScheme implements TranslationSchemeInterface
             case SymbolType::NT_ARRAY_VALUES . ".0.0":
             case SymbolType::NT_NEXT_ARRAY_VALUES . ".0.2":
                 $elementIndex = $production->getHeader()->getAttribute('i.element_index');
-                var_dump("Element open: {$elementIndex}");
+                $this->listener->onBeginElement($elementIndex);
                 break;
 
             case SymbolType::NT_ARRAY_VALUES . ".0.2":
                 $elementIndex = $production->getHeader()->getAttribute('i.element_index');
                 $production->getSymbol(2)->setAttribute('i.element_index', $elementIndex + 1);
                 $value = $production->getSymbol(0);
-                $offset = $value->getAttribute('s.byte_offset');
-                $length = $value->getAttribute('s.byte_length');
-                var_dump("Element close [{$offset}->{$length}]: {$elementIndex}");
+                $offsetInBytes = $value->getAttribute('s.byte_offset');
+                $lengthInBytes = $value->getAttribute('s.byte_length');
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $this->listener->onEndElement($elementIndex, $documentPart);
                 break;
 
             case SymbolType::NT_NEXT_ARRAY_VALUES . ".0.4":
                 $elementIndex = $production->getHeader()->getAttribute('i.element_index');
                 $production->getSymbol(4)->setAttribute('i.element_index', $elementIndex + 1);
                 $value = $production->getSymbol(2);
-                $offset = $value->getAttribute('s.byte_offset');
-                $length = $value->getAttribute('s.byte_length');
-                var_dump("Element close [{$offset}->{$length}]: {$elementIndex}");
-                break;
-
-            case SymbolType::NT_NUMBER . ".0.1":
-                break;
-
-            case SymbolType::NT_NUMBER . ".1.0":
-                break;
-
-            case SymbolType::NT_UNSIGNED_NUMBER . ".0.0":
-                break;
-
-            case SymbolType::NT_UNSIGNED_NUMBER . ".0.1":
+                $offsetInBytes = $value->getAttribute('s.byte_offset');
+                $lengthInBytes = $value->getAttribute('s.byte_length');
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $this->listener->onEndElement($elementIndex, $documentPart);
                 break;
 
             case SymbolType::NT_FRAC . ".0.1":
@@ -166,33 +161,39 @@ class TranslationScheme implements TranslationSchemeInterface
         $hash = "{$production->getHeader()->getSymbolId()}.{$production->getIndex()}";
         switch ($hash) {
             case SymbolType::NT_JSON . ".0":
-                var_dump("JSON close");
+                $this->listener->onEndDocument();
                 break;
 
             case SymbolType::NT_OBJECT . ".0":
-                $offset = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
                 $closingBracket = $production->getSymbol(3);
-                $length =
+                $lengthInBytes =
                     $closingBracket->getAttribute('s.byte_offset') +
-                    $closingBracket->getAttribute('s.byte_length') - $offset;
+                    $closingBracket->getAttribute('s.byte_length') - $offsetInBytes;
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
-                var_dump("Object close [{$offset}->{$length}]");
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $this->listener->onEndObject($documentPart);
                 break;
 
             case SymbolType::NT_ARRAY . ".0":
-                $startOffset = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
                 $closingBracket = $production->getSymbol(3);
-                $length =
+                $lengthInBytes =
                     $closingBracket->getAttribute('s.byte_offset') +
-                    $closingBracket->getAttribute('s.byte_length') - $startOffset;
+                    $closingBracket->getAttribute('s.byte_length') - $offsetInBytes;
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $startOffset)
-                    ->setAttribute('s.byte_length', $length);
-                var_dump("Array close [{$startOffset}->{$length}]");
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $this->listener->onEndArray($documentPart);
                 break;
 
             case SymbolType::NT_STRING . ".0":
@@ -202,10 +203,9 @@ class TranslationScheme implements TranslationSchemeInterface
                     $closingQuote->getAttribute('s.byte_offset') +
                     $closingQuote->getAttribute('s.byte_length') - $offset;
                 $symbolList = $production->getSymbol(1)->getAttribute('s.text');
-                $text = (new Utf8Encoder)->encode(...$symbolList);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.text', $text)
+                    ->setAttribute('s.text', $symbolList)
                     ->setAttribute('s.byte_offset', $offset)
                     ->setAttribute('s.byte_length', $length);
                 break;
@@ -238,10 +238,22 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_OBJECT_MEMBER . ".0":
-                $offsetStart = $production->getSymbol(4)->getAttribute('s.byte_offset');
-                $length = $production->getSymbol(4)->getAttribute('s.byte_length');
-                $propertyName = $production->getSymbol(0)->getAttribute('s.text');
-                var_dump("Property value close [{$offsetStart}->{$length}]: {$propertyName}");
+                $value = $production->getSymbol(4);
+                $offsetInBytes = $value->getAttribute('s.byte_offset');
+                $lengthInBytes = $value->getAttribute('s.byte_length');
+                $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
+                $propertyName = $production->getSymbol(0);
+                $propertyNameOffsetInBytes = $propertyName->getAttribute('s.byte_offset');
+                $propertyNameLengthInBytes = $propertyName->getAttribute('s.byte_length');
+                $text = $propertyName->getAttribute('s.text');
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $string = new StringValue(...$text);
+                $propertyNameOffset = new Offset($propertyNameOffsetInBytes);
+                $propertyNameLength = new Length($propertyNameLengthInBytes);
+                $scalar = new StringScalar($propertyNameOffset, $propertyNameLength, $string);
+                $this->listener->onEndProperty($scalar, $propertyIndex, $documentPart);
                 break;
 
             case SymbolType::NT_NUMBER . ".0":
