@@ -153,10 +153,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $openingBracket = $production->getSymbol(0);
                 $closingBracket = $production->getSymbol(3);
                 $documentPart = $this->createDocumentPartBetween($openingBracket, $closingBracket);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                $this->setHeaderDocumentPart($production, $documentPart);
                 $this->listener->onEndObject($documentPart);
                 break;
 
@@ -164,10 +161,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $openingBracket = $production->getSymbol(0);
                 $closingBracket = $production->getSymbol(3);
                 $documentPart = $this->createDocumentPartBetween($openingBracket, $closingBracket);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                $this->setHeaderDocumentPart($production, $documentPart);
                 $this->listener->onEndArray($documentPart);
                 break;
 
@@ -175,12 +169,11 @@ class TranslationScheme implements TranslationSchemeInterface
                 $openingQuote = $production->getSymbol(0);
                 $closingQuote = $production->getSymbol(2);
                 $documentPart = $this->createDocumentPartBetween($openingQuote, $closingQuote);
+                $this->setHeaderDocumentPart($production, $documentPart);
                 $symbolList = $production->getSymbol(1)->getAttribute('s.text');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.text', $symbolList)
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                    ->setAttribute('s.text', $symbolList);
                 break;
 
             case SymbolType::NT_STRING_CONTENT . ".0":
@@ -241,15 +234,13 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_NUMBER . ".1":
                 $unsigned = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($unsigned);
+                $this->copyDocumentPartToHeader($production, $unsigned);
                 $intText = $unsigned->getAttribute('s.number_int');
                 $fracText = $unsigned->getAttribute('s.number_frac');
                 $expText = $unsigned->getAttribute('s.number_exp');
                 $isExpNegative = $unsigned->getAttribute('s.number_exp_negative');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes())
                     ->setAttribute('s.number_negative', false)
                     ->setAttribute('s.number_int', $intText)
                     ->setAttribute('s.number_frac', $fracText)
@@ -259,22 +250,18 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_INT . ".0":
                 $int = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($int);
+                $this->copyDocumentPartToHeader($production, $int);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes())
                     ->setAttribute('s.number_int', [0x30]);
                 break;
 
             case SymbolType::NT_INT . ".1":
                 $int = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($int);
+                $this->copyDocumentPartToHeader($production, $int);
                 $intText = $int->getAttribute('s.text');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes())
                     ->setAttribute('s.number_int', $intText);
                 break;
 
@@ -425,80 +412,56 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_VALUE . ".0":
                 $scalar = $production->getSymbol(0);
+                $this->copyDocumentPartToHeader($production, $scalar);
                 $documentPart = $this->createDocumentPart($scalar);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $bool = new BoolScalar($documentPart, false);
                 $this->listener->onBool($bool);
                 break;
 
             case SymbolType::NT_VALUE . ".1":
                 $scalar = $production->getSymbol(0);
+                $this->copyDocumentPartToHeader($production, $scalar);
                 $documentPart = $this->createDocumentPart($scalar);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $null = new NullScalar($documentPart);
                 $this->listener->onNull($null);
                 break;
 
             case SymbolType::NT_VALUE . ".2":
                 $scalar = $production->getSymbol(0);
+                $this->copyDocumentPartToHeader($production, $scalar);
                 $documentPart = $this->createDocumentPart($scalar);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $bool = new BoolScalar($documentPart, true);
                 $this->listener->onBool($bool);
                 break;
 
             case SymbolType::NT_VALUE . ".3":
                 $struct = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($struct);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                $this->copyDocumentPartToHeader($production, $struct);
                 break;
 
 
             case SymbolType::NT_VALUE . ".4":
                 $struct = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($struct);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                $this->copyDocumentPartToHeader($production, $struct);
                 break;
 
             case SymbolType::NT_VALUE . ".5":
                 $scalar = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($scalar);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                $this->copyDocumentPartToHeader($production, $scalar);
                 $isNegative = $scalar->getAttribute('s.number_negative');
                 $int = $this->createStringValue($scalar, 's.number_int');
                 $frac = $this->createStringValue($scalar, 's.number_frac');
                 $isExpNegative = $scalar->getAttribute('s.number_exp_negative');
                 $exp = $this->createStringValue($scalar, 's.number_exp');
                 $numberValue = new NumberValue($isNegative, $int, $frac, $isExpNegative, $exp);
+                $documentPart = $this->createDocumentPart($scalar);
                 $number = new NumberScalar($documentPart, $numberValue);
                 $this->listener->onNumber($number);
                 break;
 
             case SymbolType::NT_VALUE . ".6":
                 $scalar = $production->getSymbol(0);
-                $documentPart = $this->createDocumentPart($scalar);
-                $production
-                    ->getHeader()
-                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
-                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+                $this->copyDocumentPartToHeader($production, $scalar);
                 $string = $this->createString($scalar);
                 $this->listener->onString($string);
                 break;
@@ -636,5 +599,29 @@ class TranslationScheme implements TranslationSchemeInterface
     {
         $text = $symbol->getAttribute($attributeName);
         return new StringValue(...$text);
+    }
+
+    /**
+     * @param Production $production
+     * @param DocumentPartInterface $documentPart
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function setHeaderDocumentPart(Production $production, DocumentPartInterface $documentPart): void
+    {
+        $production
+            ->getHeader()
+            ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+            ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
+    }
+
+    /**
+     * @param Production $production
+     * @param Symbol $symbol
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function copyDocumentPartToHeader(Production $production, Symbol $symbol): void
+    {
+        $documentPart = $this->createDocumentPart($symbol);
+        $this->setHeaderDocumentPart($production, $documentPart);
     }
 }
