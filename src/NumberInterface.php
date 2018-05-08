@@ -2,16 +2,6 @@
 
 namespace Remorhaz\JSON\Parser;
 
-interface NumberInterface extends ScalarInterface
+interface NumberInterface extends ScalarInterface, NumberValueInterface
 {
-
-    public function getInt(): StringValueInterface;
-
-    public function getFrac(): StringValueInterface;
-
-    public function isNegative(): bool;
-
-    public function getExp(): StringValueInterface;
-
-    public function isExpNegative(): bool;
 }

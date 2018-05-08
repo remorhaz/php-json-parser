@@ -7,7 +7,6 @@ use Remorhaz\UniLex\Lexer\Token;
 use Remorhaz\UniLex\Parser\Production;
 use Remorhaz\UniLex\Parser\Symbol;
 use Remorhaz\UniLex\Unicode\Grammar\TokenAttribute;
-use Remorhaz\UniLex\Unicode\Utf8Encoder;
 
 class TranslationScheme implements TranslationSchemeInterface
 {
@@ -82,8 +81,9 @@ class TranslationScheme implements TranslationSchemeInterface
                 $text = $propertyName->getAttribute('s.text');
                 $offset = new Offset($offsetStart);
                 $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
                 $string = new StringValue(...$text);
-                $scalar = new StringScalar($offset, $length, $string);
+                $scalar = new StringScalar($documentPart, $string);
                 $this->listener->onBeginProperty($scalar, $propertyIndex);
                 break;
 
@@ -252,7 +252,8 @@ class TranslationScheme implements TranslationSchemeInterface
                 $string = new StringValue(...$text);
                 $propertyNameOffset = new Offset($propertyNameOffsetInBytes);
                 $propertyNameLength = new Length($propertyNameLengthInBytes);
-                $scalar = new StringScalar($propertyNameOffset, $propertyNameLength, $string);
+                $propertyNameDocumentPart = new DocumentPart($propertyNameOffset, $propertyNameLength);
+                $scalar = new StringScalar($propertyNameDocumentPart, $string);
                 $this->listener->onEndProperty($scalar, $propertyIndex, $documentPart);
                 break;
 
@@ -475,35 +476,47 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_VALUE . ".0":
                 $scalar = $production->getSymbol(0);
-                $offset = $scalar->getAttribute('s.byte_offset');
-                $length = $scalar->getAttribute('s.byte_length');
+                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
+                $lengthInBytes = $scalar->getAttribute('s.byte_length');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
-                var_dump("Set scalar bool [{$offset}->{$length}]: false");
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $bool = new BoolScalar($documentPart, false);
+                $this->listener->onBool($bool);
                 break;
 
             case SymbolType::NT_VALUE . ".1":
                 $scalar = $production->getSymbol(0);
-                $offset = $scalar->getAttribute('s.byte_offset');
-                $length = $scalar->getAttribute('s.byte_length');
+                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
+                $lengthInBytes = $scalar->getAttribute('s.byte_length');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
-                var_dump("Set scalar null [{$offset}->{$length}]: null");
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $null = new NullScalar($documentPart);
+                $this->listener->onNull($null);
                 break;
 
             case SymbolType::NT_VALUE . ".2":
                 $scalar = $production->getSymbol(0);
-                $offset = $scalar->getAttribute('s.byte_offset');
-                $length = $scalar->getAttribute('s.byte_length');
+                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
+                $lengthInBytes = $scalar->getAttribute('s.byte_length');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
-                var_dump("Set scalar bool [{$offset}->{$length}]: true");
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $bool = new BoolScalar($documentPart, true);
+                $this->listener->onBool($bool);
                 break;
 
             case SymbolType::NT_VALUE . ".3":
@@ -514,7 +527,6 @@ class TranslationScheme implements TranslationSchemeInterface
                     ->getHeader()
                     ->setAttribute('s.byte_offset', $offset)
                     ->setAttribute('s.byte_length', $length);
-                var_dump("Set struct object [{$offset}->{$length}]: true");
                 break;
 
 
@@ -526,41 +538,47 @@ class TranslationScheme implements TranslationSchemeInterface
                     ->getHeader()
                     ->setAttribute('s.byte_offset', $offset)
                     ->setAttribute('s.byte_length', $length);
-                var_dump("Set struct array [{$offset}->{$length}]: true");
                 break;
 
             case SymbolType::NT_VALUE . ".5":
                 $scalar = $production->getSymbol(0);
-                $offset = $scalar->getAttribute('s.byte_offset');
-                $length = $scalar->getAttribute('s.byte_length');
+                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
+                $lengthInBytes = $scalar->getAttribute('s.byte_length');
                 $isNegative = $scalar->getAttribute('s.number_negative');
                 $int = $scalar->getAttribute('s.number_int');
                 $frac = $scalar->getAttribute('s.number_frac');
                 $exp = $scalar->getAttribute('s.number_exp');
                 $isExpNegative = $scalar->getAttribute('s.number_exp_negative');
-                $isNegativeText = $isNegative ? '-' : '';
-                $encoder = new Utf8Encoder;
-                $intText = $encoder->encode(...$int);
-                $fracText = empty($frac) ? '' : ".{$encoder->encode(...$frac)}";
-                $expPrefixText = $isExpNegative ? 'e-' : 'e';
-                $expText = empty($exp) ? '' : "{$expPrefixText}{$encoder->encode(...$exp)}";
-                var_dump("Set scalar number [{$offset}->{$length}]: {$isNegativeText}{$intText}{$fracText}{$expText}");
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $intValue = new StringValue(...$int);
+                $fracValue = new StringValue(...$frac);
+                $expValue = new StringValue(...$exp);
+                $numberValue = new NumberValue($isNegative, $intValue, $fracValue, $isExpNegative, $expValue);
+                $number = new NumberScalar($documentPart, $numberValue);
+                $this->listener->onNumber($number);
                 break;
 
             case SymbolType::NT_VALUE . ".6":
                 $scalar = $production->getSymbol(0);
-                $offset = $scalar->getAttribute('s.byte_offset');
-                $length = $scalar->getAttribute('s.byte_length');
+                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
+                $lengthInBytes = $scalar->getAttribute('s.byte_length');
                 $text = $scalar->getAttribute('s.text');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
-                var_dump("Set scalar string [{$offset}->{$length}]: {$text}");
+                    ->setAttribute('s.byte_offset', $offsetInBytes)
+                    ->setAttribute('s.byte_length', $lengthInBytes);
+                $offset = new Offset($offsetInBytes);
+                $length = new Length($lengthInBytes);
+                $documentPart = new DocumentPart($offset, $length);
+                $stringValue = new StringValue(...$text);
+                $string = new StringScalar($documentPart, $stringValue);
+                $this->listener->onString($string);
                 break;
         }
     }

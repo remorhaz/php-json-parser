@@ -7,9 +7,9 @@ class StringScalar extends Scalar implements StringInterface
 
     private $string;
 
-    public function __construct(OffsetInterface $offset, LengthInterface $length, StringValueInterface $string)
+    public function __construct(DocumentPartInterface $documentPart, StringValueInterface $string)
     {
-        parent::__construct($offset, $length);
+        parent::__construct($documentPart);
         $this->string = $string;
     }
 

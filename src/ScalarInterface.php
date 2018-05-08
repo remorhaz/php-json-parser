@@ -2,6 +2,8 @@
 
 namespace Remorhaz\JSON\Parser;
 
-interface ScalarInterface extends DocumentPartInterface
+interface ScalarInterface
 {
+
+    public function getDocumentPart(): DocumentPartInterface;
 }

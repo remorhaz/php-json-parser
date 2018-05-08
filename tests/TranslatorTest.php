@@ -4,7 +4,10 @@ namespace Remorhaz\JSON\Parser\Test;
 
 use PHPUnit\Framework\TestCase;
 use Remorhaz\JSON\Parser\AbstractStreamListener;
+use Remorhaz\JSON\Parser\BoolInterface;
 use Remorhaz\JSON\Parser\DocumentPartInterface;
+use Remorhaz\JSON\Parser\NullInterface;
+use Remorhaz\JSON\Parser\NumberInterface;
 use Remorhaz\JSON\Parser\OffsetInterface;
 use Remorhaz\JSON\Parser\StringInterface;
 use Remorhaz\JSON\Parser\TokenMatcher;
@@ -39,26 +42,33 @@ class TranslatorTest extends TestCase
             "BEGIN DOCUMENT",
             "BEGIN OBJECT [0]",
             "BEGIN PROPERTY [1(3)]#0: 'a'",
+            "SET BOOL [5(4)]: true",
             "END PROPERTY [5(4)]#0: 'a'",
             "BEGIN PROPERTY [11(3)]#1: 'b'",
             "BEGIN ARRAY [16]",
             "BEGIN ELEMENT #0",
+            "SET NUMBER [17(1)]: 0",
             "END ELEMENT [17(1)]#0",
             "BEGIN ELEMENT #1",
+            "SET NUMBER [20(8)]: -1.2e10",
             "END ELEMENT [20(8)]#1",
             "BEGIN ELEMENT #2",
+            "SET BOOL [30(5)]: false",
             "END ELEMENT [30(5)]#2",
             "BEGIN ELEMENT #3",
             "BEGIN OBJECT [37]",
             "BEGIN PROPERTY [38(3)]#0: 'c'",
+            "SET NULL [43(4)]: null",
             "END PROPERTY [43(4)]#0: 'c'",
             "BEGIN PROPERTY [49(3)]#1: 'd'",
+            "SET STRING [55(18)]: 'One two \n three'",
             "END PROPERTY [55(18)]#1: 'd'",
             "END OBJECT [37(37)]",
             "END ELEMENT [37(37)]#3",
             "END ARRAY [16(60)]",
             "END PROPERTY [16(60)]#1: 'b'",
             "BEGIN PROPERTY [78(3)]#2: 'e'",
+            "SET STRING [82(2)]: ''",
             "END PROPERTY [82(2)]#2: 'e'",
             "END OBJECT [0(85)]",
             "END DOCUMENT",
@@ -99,8 +109,9 @@ class TranslatorTest extends TestCase
 
             public function onBeginProperty(StringInterface $name, int $index): void
             {
+                $part = $name->getDocumentPart();
                 $this->log[] =
-                    "BEGIN PROPERTY [{$name->getOffset()->inBytes()}({$name->getLength()->inBytes()})]#{$index}: " .
+                    "BEGIN PROPERTY [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]#{$index}: " .
                     "'{$name->asString()}'";
             }
 
@@ -130,6 +141,41 @@ class TranslatorTest extends TestCase
             {
                 $this->log[] =
                     "END ELEMENT [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]#{$index}";
+            }
+
+            public function onString(StringInterface $string): void
+            {
+                $part = $string->getDocumentPart();
+                $this->log[] =
+                    "SET STRING [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]: " .
+                    "'{$string->asString()}'";
+            }
+
+            public function onBool(BoolInterface $bool): void
+            {
+                $part = $bool->getDocumentPart();
+                $boolText = $bool->asBool() ? 'true' : 'false';
+                $this->log[] =
+                    "SET BOOL [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]: " .
+                    "{$boolText}";
+            }
+
+            public function onNull(NullInterface $null): void
+            {
+                $part = $null->getDocumentPart();
+                $this->log[] = "SET NULL [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]: null";
+            }
+
+            public function onNumber(NumberInterface $number): void
+            {
+                $part = $number->getDocumentPart();
+                $isNegativeText = $number->isNegative() ? '-' : '';
+                $fractText = empty($number->getFrac()->asArray()) ? '' : ".{$number->getFrac()->asString()}";
+                $expPrefixText = $number->isExpNegative() ? 'e-' : 'e';
+                $expText = empty($number->getExp()->asArray()) ? '' : "{$expPrefixText}{$number->getExp()->asString()}";
+                $this->log[] =
+                    "SET NUMBER [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]: " .
+                    "{$isNegativeText}{$number->getInt()->asString()}{$fractText}{$expText}";
             }
         };
     }
