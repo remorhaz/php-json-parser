@@ -75,12 +75,9 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_OBJECT_MEMBER . ".0.4":
                 $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
-                $propertyName = $production->getSymbol(0);
-                $text = $propertyName->getAttribute('s.text');
-                $documentPart = $this->createDocumentPart($propertyName);
-                $string = new StringValue(...$text);
-                $scalar = new StringScalar($documentPart, $string);
-                $this->listener->onBeginProperty($scalar, $propertyIndex);
+                $property = $production->getSymbol(0);
+                $propertyName = $this->createString($property);
+                $this->listener->onBeginProperty($propertyName, $propertyIndex);
                 break;
 
             case SymbolType::NT_NEXT_OBJECT_MEMBERS . ".0.2":
@@ -214,15 +211,12 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_OBJECT_MEMBER . ".0":
+                $property = $production->getSymbol(0);
                 $value = $production->getSymbol(4);
                 $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
-                $propertyName = $production->getSymbol(0);
-                $text = $propertyName->getAttribute('s.text');
                 $documentPart = $this->createDocumentPart($value);
-                $string = new StringValue(...$text);
-                $propertyNameDocumentPart = $this->createDocumentPart($propertyName);
-                $scalar = new StringScalar($propertyNameDocumentPart, $string);
-                $this->listener->onEndProperty($scalar, $propertyIndex, $documentPart);
+                $propertyName = $this->createString($property);
+                $this->listener->onEndProperty($propertyName, $propertyIndex, $documentPart);
                 break;
 
             case SymbolType::NT_NUMBER . ".0":
@@ -484,19 +478,16 @@ class TranslationScheme implements TranslationSchemeInterface
             case SymbolType::NT_VALUE . ".5":
                 $scalar = $production->getSymbol(0);
                 $documentPart = $this->createDocumentPart($scalar);
-                $isNegative = $scalar->getAttribute('s.number_negative');
-                $int = $scalar->getAttribute('s.number_int');
-                $frac = $scalar->getAttribute('s.number_frac');
-                $exp = $scalar->getAttribute('s.number_exp');
-                $isExpNegative = $scalar->getAttribute('s.number_exp_negative');
                 $production
                     ->getHeader()
                     ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
                     ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
-                $intValue = new StringValue(...$int);
-                $fracValue = new StringValue(...$frac);
-                $expValue = new StringValue(...$exp);
-                $numberValue = new NumberValue($isNegative, $intValue, $fracValue, $isExpNegative, $expValue);
+                $isNegative = $scalar->getAttribute('s.number_negative');
+                $int = $this->createStringValue($scalar, 's.number_int');
+                $frac = $this->createStringValue($scalar, 's.number_frac');
+                $isExpNegative = $scalar->getAttribute('s.number_exp_negative');
+                $exp = $this->createStringValue($scalar, 's.number_exp');
+                $numberValue = new NumberValue($isNegative, $int, $frac, $isExpNegative, $exp);
                 $number = new NumberScalar($documentPart, $numberValue);
                 $this->listener->onNumber($number);
                 break;
@@ -504,13 +495,11 @@ class TranslationScheme implements TranslationSchemeInterface
             case SymbolType::NT_VALUE . ".6":
                 $scalar = $production->getSymbol(0);
                 $documentPart = $this->createDocumentPart($scalar);
-                $text = $scalar->getAttribute('s.text');
                 $production
                     ->getHeader()
                     ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
                     ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
-                $stringValue = new StringValue(...$text);
-                $string = new StringScalar($documentPart, $stringValue);
+                $string = $this->createString($scalar);
                 $this->listener->onString($string);
                 break;
         }
@@ -623,5 +612,29 @@ class TranslationScheme implements TranslationSchemeInterface
             $sum += $symbol->getAttribute('s.byte_length');
         }
         return new Length($sum);
+    }
+
+    /**
+     * @param Symbol $symbol
+     * @return StringInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createString(Symbol $symbol): StringInterface
+    {
+        $documentPart = $this->createDocumentPart($symbol);
+        $stringValue = $this->createStringValue($symbol, 's.text');
+        return new StringScalar($documentPart, $stringValue);
+    }
+
+    /**
+     * @param Symbol $symbol
+     * @param string $attributeName
+     * @return StringValueInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createStringValue(Symbol $symbol, string $attributeName): StringValueInterface
+    {
+        $text = $symbol->getAttribute($attributeName);
+        return new StringValue(...$text);
     }
 }
