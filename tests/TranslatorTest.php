@@ -9,16 +9,13 @@ use Remorhaz\JSON\Parser\DocumentPartInterface;
 use Remorhaz\JSON\Parser\NullInterface;
 use Remorhaz\JSON\Parser\NumberInterface;
 use Remorhaz\JSON\Parser\OffsetInterface;
+use Remorhaz\JSON\Parser\ParserFactory;
 use Remorhaz\JSON\Parser\StringInterface;
-use Remorhaz\JSON\Parser\TokenMatcher;
-use Remorhaz\JSON\Parser\TranslationScheme;
-use Remorhaz\UniLex\Grammar\ContextFree\GrammarLoader;
-use Remorhaz\UniLex\Grammar\ContextFree\TokenFactory;
-use Remorhaz\UniLex\Lexer\TokenReader;
-use Remorhaz\UniLex\Parser\LL1\Parser;
-use Remorhaz\UniLex\Parser\LL1\TranslationSchemeApplier;
-use Remorhaz\UniLex\Unicode\CharBufferFactory;
 
+/**
+ * @covers \Remorhaz\JSON\Parser\TranslationScheme
+ * @covers \Remorhaz\JSON\Parser\ParserFactory
+ */
 class TranslatorTest extends TestCase
 {
 
@@ -29,13 +26,8 @@ class TranslatorTest extends TestCase
     {
         //       0    5    10   15   20   25   30   35   40   45   50   55   60  * 65   70   75   80   85
         $json = '{"a":true, "b": [0, -1.2e+10, false, {"c": null, "d" : "One two \\n three"} ], "e":""}';
-        $buffer = CharBufferFactory::createFromString($json);
-        $grammar = GrammarLoader::loadFile(__DIR__ . "/../spec/GrammarSpec.php");
-        $lexer = new TokenReader($buffer, new TokenMatcher, new TokenFactory($grammar));
         $listener = $this->createStreamListener();
-        $scheme = new TranslationScheme($listener);
-        $translator = new TranslationSchemeApplier($scheme);
-        $parser = new Parser($grammar, $lexer, $translator);
+        $parser = (new ParserFactory)->createFromString($json, $listener);
         $parser->run();
         $actualLog = $listener->getLog();
         $expectedLog = [
