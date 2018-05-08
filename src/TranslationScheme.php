@@ -32,14 +32,14 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_OBJECT . ".0.1":
-                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
-                $offset = new Offset($offsetInBytes);
+                $openingBracket = $production->getSymbol(0);
+                $offset = $this->createOffset($openingBracket);
                 $this->listener->onBeginObject($offset);
                 break;
 
             case SymbolType::NT_ARRAY . ".0.1":
-                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
-                $offset = new Offset($offsetInBytes);
+                $openingBracket = $production->getSymbol(0);
+                $offset = $this->createOffset($openingBracket);
                 $this->listener->onBeginArray($offset);
                 break;
 
@@ -76,12 +76,8 @@ class TranslationScheme implements TranslationSchemeInterface
             case SymbolType::NT_OBJECT_MEMBER . ".0.4":
                 $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
                 $propertyName = $production->getSymbol(0);
-                $offsetStart = $propertyName->getAttribute('s.byte_offset');
-                $lengthInBytes = $propertyName->getAttribute('s.byte_length');
                 $text = $propertyName->getAttribute('s.text');
-                $offset = new Offset($offsetStart);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                $documentPart = $this->createDocumentPart($propertyName);
                 $string = new StringValue(...$text);
                 $scalar = new StringScalar($documentPart, $string);
                 $this->listener->onBeginProperty($scalar, $propertyIndex);
@@ -111,11 +107,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $elementIndex = $production->getHeader()->getAttribute('i.element_index');
                 $production->getSymbol(2)->setAttribute('i.element_index', $elementIndex + 1);
                 $value = $production->getSymbol(0);
-                $offsetInBytes = $value->getAttribute('s.byte_offset');
-                $lengthInBytes = $value->getAttribute('s.byte_length');
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                $documentPart = $this->createDocumentPart($value);
                 $this->listener->onEndElement($elementIndex, $documentPart);
                 break;
 
@@ -123,11 +115,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $elementIndex = $production->getHeader()->getAttribute('i.element_index');
                 $production->getSymbol(4)->setAttribute('i.element_index', $elementIndex + 1);
                 $value = $production->getSymbol(2);
-                $offsetInBytes = $value->getAttribute('s.byte_offset');
-                $lengthInBytes = $value->getAttribute('s.byte_length');
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                $documentPart = $this->createDocumentPart($value);
                 $this->listener->onEndElement($elementIndex, $documentPart);
                 break;
 
@@ -165,49 +153,37 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_OBJECT . ".0":
-                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $openingBracket = $production->getSymbol(0);
                 $closingBracket = $production->getSymbol(3);
-                $lengthInBytes =
-                    $closingBracket->getAttribute('s.byte_offset') +
-                    $closingBracket->getAttribute('s.byte_length') - $offsetInBytes;
+                $documentPart = $this->createDocumentPartBetween($openingBracket, $closingBracket);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $this->listener->onEndObject($documentPart);
                 break;
 
             case SymbolType::NT_ARRAY . ".0":
-                $offsetInBytes = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $openingBracket = $production->getSymbol(0);
                 $closingBracket = $production->getSymbol(3);
-                $lengthInBytes =
-                    $closingBracket->getAttribute('s.byte_offset') +
-                    $closingBracket->getAttribute('s.byte_length') - $offsetInBytes;
+                $documentPart = $this->createDocumentPartBetween($openingBracket, $closingBracket);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $this->listener->onEndArray($documentPart);
                 break;
 
             case SymbolType::NT_STRING . ".0":
-                $offset = $production->getSymbol(0)->getAttribute('s.byte_offset');
+                $openingQuote = $production->getSymbol(0);
                 $closingQuote = $production->getSymbol(2);
-                $length =
-                    $closingQuote->getAttribute('s.byte_offset') +
-                    $closingQuote->getAttribute('s.byte_length') - $offset;
+                $documentPart = $this->createDocumentPartBetween($openingQuote, $closingQuote);
                 $symbolList = $production->getSymbol(1)->getAttribute('s.text');
                 $production
                     ->getHeader()
                     ->setAttribute('s.text', $symbolList)
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 break;
 
             case SymbolType::NT_STRING_CONTENT . ".0":
@@ -239,20 +215,12 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_OBJECT_MEMBER . ".0":
                 $value = $production->getSymbol(4);
-                $offsetInBytes = $value->getAttribute('s.byte_offset');
-                $lengthInBytes = $value->getAttribute('s.byte_length');
                 $propertyIndex = $production->getHeader()->getAttribute('i.property_index');
                 $propertyName = $production->getSymbol(0);
-                $propertyNameOffsetInBytes = $propertyName->getAttribute('s.byte_offset');
-                $propertyNameLengthInBytes = $propertyName->getAttribute('s.byte_length');
                 $text = $propertyName->getAttribute('s.text');
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                $documentPart = $this->createDocumentPart($value);
                 $string = new StringValue(...$text);
-                $propertyNameOffset = new Offset($propertyNameOffsetInBytes);
-                $propertyNameLength = new Length($propertyNameLengthInBytes);
-                $propertyNameDocumentPart = new DocumentPart($propertyNameOffset, $propertyNameLength);
+                $propertyNameDocumentPart = $this->createDocumentPart($propertyName);
                 $scalar = new StringScalar($propertyNameDocumentPart, $string);
                 $this->listener->onEndProperty($scalar, $propertyIndex, $documentPart);
                 break;
@@ -261,9 +229,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $minus = $production->getSymbol(0);
                 $offset = $minus->getAttribute('s.byte_offset');
                 $unsigned = $production->getSymbol(1);
-                $length =
-                    $minus->getAttribute('s.byte_length') +
-                    $unsigned->getAttribute('s.byte_length');
+                $length = $this->createLengthSum($minus, $unsigned);
                 $intText = $unsigned->getAttribute('s.number_int');
                 $fracText = $unsigned->getAttribute('s.number_frac');
                 $expText = $unsigned->getAttribute('s.number_exp');
@@ -271,7 +237,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $production
                     ->getHeader()
                     ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_negative', true)
                     ->setAttribute('s.number_int', $intText)
                     ->setAttribute('s.number_frac', $fracText)
@@ -281,16 +247,15 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_NUMBER . ".1":
                 $unsigned = $production->getSymbol(0);
-                $length = $unsigned->getAttribute('s.byte_length');
-                $offset = $unsigned->getAttribute('s.byte_offset');
+                $documentPart = $this->createDocumentPart($unsigned);
                 $intText = $unsigned->getAttribute('s.number_int');
                 $fracText = $unsigned->getAttribute('s.number_frac');
                 $expText = $unsigned->getAttribute('s.number_exp');
                 $isExpNegative = $unsigned->getAttribute('s.number_exp_negative');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes())
                     ->setAttribute('s.number_negative', false)
                     ->setAttribute('s.number_int', $intText)
                     ->setAttribute('s.number_frac', $fracText)
@@ -300,24 +265,22 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_INT . ".0":
                 $int = $production->getSymbol(0);
-                $offset = $int->getAttribute('s.byte_offset');
-                $length = $int->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($int);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes())
                     ->setAttribute('s.number_int', [0x30]);
                 break;
 
             case SymbolType::NT_INT . ".1":
                 $int = $production->getSymbol(0);
-                $offset = $int->getAttribute('s.byte_offset');
-                $length = $int->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($int);
                 $intText = $int->getAttribute('s.text');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes())
                     ->setAttribute('s.number_int', $intText);
                 break;
 
@@ -326,16 +289,14 @@ class TranslationScheme implements TranslationSchemeInterface
                 $offset = $int->getAttribute('s.byte_offset');
                 $intText = $int->getAttribute('s.number_int');
                 $tail = $production->getSymbol(1);
-                $length =
-                    $int->getAttribute('s.byte_length') +
-                    $tail->getAttribute('s.byte_length');
+                $length = $this->createLengthSum($int, $tail);
                 $fracText = $tail->getAttribute('s.number_frac');
                 $expText = $tail->getAttribute('s.number_exp');
                 $isExpNegative = $tail->getAttribute('s.number_exp_negative');
                 $production
                     ->getHeader()
                     ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_int', $intText)
                     ->setAttribute('s.number_frac', $fracText)
                     ->setAttribute('s.number_exp', $expText)
@@ -344,14 +305,13 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_DIGIT . ".0":
                 $textPrefix = $production->getHeader()->getAttribute('i.number_int');
+                $zero = $production->getSymbol(0);
                 $digit = $production->getSymbol(1);
                 $text = $digit->getAttribute('s.number_int');
-                $length =
-                    $production->getSymbol(0)->getAttribute('s.byte_length') +
-                    $digit->getAttribute('s.byte_length');
+                $length = $this->createLengthSum($zero, $digit);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_int', array_merge($textPrefix, [0x30], $text));
                 break;
 
@@ -386,29 +346,26 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_FRAC . ".0":
+                $dot = $production->getSymbol(0);
                 $digit = $production->getSymbol(1);
                 $text = $digit->getAttribute('s.number_int');
-                $length =
-                    $production->getSymbol(0)->getAttribute('s.byte_length') +
-                    $digit->getAttribute('s.byte_length');
+                $length = $this->createLengthSum($dot, $digit);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_int', $text);
                 break;
 
             case SymbolType::NT_OPT_EXP . ".0":
+                $e = $production->getSymbol(0);
+                $sign = $production->getSymbol(1);
                 $digit = $production->getSymbol(2);
                 $text = $digit->getAttribute('s.number_int');
-                $sign = $production->getSymbol(1);
                 $isNegative = $sign->getAttribute('s.number_negative');
-                $length =
-                    $production->getSymbol(0)->getAttribute('s.byte_length') +
-                    $sign->getAttribute('s.byte_length') +
-                    $digit->getAttribute('s.byte_length');
+                $length = $this->createLengthSum($e, $sign, $digit);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_int', $text)
                     ->setAttribute('s.number_negative', $isNegative);
                 break;
@@ -448,14 +405,12 @@ class TranslationScheme implements TranslationSchemeInterface
                 $frac = $production->getSymbol(0);
                 $fracText = $frac->getAttribute('s.number_int');
                 $exp = $production->getSymbol(1);
-                $length =
-                    $frac->getAttribute('s.byte_length') +
-                    $exp->getAttribute('s.byte_length');
+                $length = $this->createLengthSum($frac, $exp);
                 $expText = $exp->getAttribute('s.number_int');
                 $isExpNegative = $exp->getAttribute('s.number_negative');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_frac', $fracText)
                     ->setAttribute('s.number_exp', $expText)
                     ->setAttribute('s.number_exp_negative', $isExpNegative);
@@ -463,12 +418,12 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_INT_TAIL . ".1":
                 $exp = $production->getSymbol(0);
-                $length = $exp->getAttribute('s.byte_length');
+                $length = $this->createLength($exp);
                 $expText = $exp->getAttribute('s.number_int');
                 $isExpNegative = $exp->getAttribute('s.number_negative');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_length', $length)
+                    ->setAttribute('s.byte_length', $length->inBytes())
                     ->setAttribute('s.number_frac', [])
                     ->setAttribute('s.number_exp', $expText)
                     ->setAttribute('s.number_exp_negative', $isExpNegative);
@@ -476,74 +431,59 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_VALUE . ".0":
                 $scalar = $production->getSymbol(0);
-                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
-                $lengthInBytes = $scalar->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($scalar);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $bool = new BoolScalar($documentPart, false);
                 $this->listener->onBool($bool);
                 break;
 
             case SymbolType::NT_VALUE . ".1":
                 $scalar = $production->getSymbol(0);
-                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
-                $lengthInBytes = $scalar->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($scalar);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $null = new NullScalar($documentPart);
                 $this->listener->onNull($null);
                 break;
 
             case SymbolType::NT_VALUE . ".2":
                 $scalar = $production->getSymbol(0);
-                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
-                $lengthInBytes = $scalar->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($scalar);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $bool = new BoolScalar($documentPart, true);
                 $this->listener->onBool($bool);
                 break;
 
             case SymbolType::NT_VALUE . ".3":
                 $struct = $production->getSymbol(0);
-                $offset = $struct->getAttribute('s.byte_offset');
-                $length = $struct->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($struct);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 break;
 
 
             case SymbolType::NT_VALUE . ".4":
                 $struct = $production->getSymbol(0);
-                $offset = $struct->getAttribute('s.byte_offset');
-                $length = $struct->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($struct);
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offset)
-                    ->setAttribute('s.byte_length', $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 break;
 
             case SymbolType::NT_VALUE . ".5":
                 $scalar = $production->getSymbol(0);
-                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
-                $lengthInBytes = $scalar->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($scalar);
                 $isNegative = $scalar->getAttribute('s.number_negative');
                 $int = $scalar->getAttribute('s.number_int');
                 $frac = $scalar->getAttribute('s.number_frac');
@@ -551,11 +491,8 @@ class TranslationScheme implements TranslationSchemeInterface
                 $isExpNegative = $scalar->getAttribute('s.number_exp_negative');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $intValue = new StringValue(...$int);
                 $fracValue = new StringValue(...$frac);
                 $expValue = new StringValue(...$exp);
@@ -566,16 +503,12 @@ class TranslationScheme implements TranslationSchemeInterface
 
             case SymbolType::NT_VALUE . ".6":
                 $scalar = $production->getSymbol(0);
-                $offsetInBytes = $scalar->getAttribute('s.byte_offset');
-                $lengthInBytes = $scalar->getAttribute('s.byte_length');
+                $documentPart = $this->createDocumentPart($scalar);
                 $text = $scalar->getAttribute('s.text');
                 $production
                     ->getHeader()
-                    ->setAttribute('s.byte_offset', $offsetInBytes)
-                    ->setAttribute('s.byte_length', $lengthInBytes);
-                $offset = new Offset($offsetInBytes);
-                $length = new Length($lengthInBytes);
-                $documentPart = new DocumentPart($offset, $length);
+                    ->setAttribute('s.byte_offset', $documentPart->getOffset()->inBytes())
+                    ->setAttribute('s.byte_length', $documentPart->getLength()->inBytes());
                 $stringValue = new StringValue(...$text);
                 $string = new StringScalar($documentPart, $stringValue);
                 $this->listener->onString($string);
@@ -613,5 +546,82 @@ class TranslationScheme implements TranslationSchemeInterface
                 }
                 break;
         }
+    }
+
+    /**
+     * @param Symbol $symbol
+     * @return DocumentPartInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createDocumentPart(Symbol $symbol): DocumentPartInterface
+    {
+        $offset = $this->createOffset($symbol);
+        $length = $this->createLength($symbol);
+        return new DocumentPart($offset, $length);
+    }
+
+    /**
+     * @param Symbol $startSymbol
+     * @param Symbol $finishSymbol
+     * @return DocumentPartInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createDocumentPartBetween(Symbol $startSymbol, Symbol $finishSymbol): DocumentPartInterface
+    {
+        $offset = $this->createOffset($startSymbol);
+        $length = $this->createLengthBetween($startSymbol, $finishSymbol);
+        return new DocumentPart($offset, $length);
+    }
+
+
+    /**
+     * @param Symbol $symbol
+     * @return OffsetInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createOffset(Symbol $symbol): OffsetInterface
+    {
+        $offsetInBytes = $symbol->getAttribute('s.byte_offset');
+        return new Offset($offsetInBytes);
+    }
+
+    /**
+     * @param Symbol $symbol
+     * @return LengthInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createLength(Symbol $symbol): LengthInterface
+    {
+        $lengthInBytes = $symbol->getAttribute('s.byte_length');
+        return new Length($lengthInBytes);
+    }
+
+    /**
+     * @param Symbol $startSymbol
+     * @param Symbol $finishSymbol
+     * @return LengthInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createLengthBetween(Symbol $startSymbol, Symbol $finishSymbol): LengthInterface
+    {
+        $offsetInBytes = $startSymbol->getAttribute('s.byte_offset');
+        $lengthInBytes =
+            $finishSymbol->getAttribute('s.byte_offset') +
+            $finishSymbol->getAttribute('s.byte_length') - $offsetInBytes;
+        return new Length($lengthInBytes);
+    }
+
+    /**
+     * @param Symbol ...$symbolList
+     * @return LengthInterface
+     * @throws \Remorhaz\UniLex\Exception
+     */
+    private function createLengthSum(Symbol ...$symbolList): LengthInterface
+    {
+        $sum = 0;
+        foreach ($symbolList as $symbol) {
+            $sum += $symbol->getAttribute('s.byte_length');
+        }
+        return new Length($sum);
     }
 }
