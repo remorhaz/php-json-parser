@@ -3,7 +3,7 @@
 namespace Remorhaz\JSON\Parser\Test;
 
 use PHPUnit\Framework\TestCase;
-use Remorhaz\JSON\Parser\Stream\AbstractStreamListener;
+use Remorhaz\JSON\Parser\Stream\AbstractEventListener;
 use Remorhaz\JSON\Parser\Stream\Event;
 use Remorhaz\JSON\Parser\Parser;
 
@@ -107,7 +107,7 @@ class TranslatorTest extends TestCase
 
     private function createStreamListener()
     {
-        return new class extends AbstractStreamListener
+        return new class extends AbstractEventListener
         {
             private $log = [];
 

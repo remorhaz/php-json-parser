@@ -4,7 +4,7 @@ namespace Remorhaz\JSON\Parser\Stream;
 
 use Remorhaz\JSON\Parser\Stream\Event;
 
-abstract class AbstractStreamListener implements StreamListenerInterface
+abstract class AbstractEventListener implements EventListenerInterface
 {
 
     public function onBeginDocument(): void

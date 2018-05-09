@@ -2,7 +2,7 @@
 
 namespace Remorhaz\JSON\Parser;
 
-use Remorhaz\JSON\Parser\Stream\StreamListenerInterface;
+use Remorhaz\JSON\Parser\Stream\EventListenerInterface;
 use Remorhaz\UniLex\Grammar\ContextFree;
 use Remorhaz\UniLex\Lexer;
 use Remorhaz\UniLex\Parser\LL1;
@@ -21,7 +21,7 @@ final class Parser
 
     private $translator;
 
-    public function __construct(StreamListenerInterface $listener)
+    public function __construct(EventListenerInterface $listener)
     {
         $this->listener = $listener;
     }

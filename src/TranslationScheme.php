@@ -3,7 +3,7 @@
 namespace Remorhaz\JSON\Parser;
 
 use Remorhaz\JSON\Parser\Stream\Event;
-use Remorhaz\JSON\Parser\Stream\StreamListenerInterface;
+use Remorhaz\JSON\Parser\Stream\EventListenerInterface;
 use Remorhaz\UniLex\Grammar\SDD\TranslationSchemeInterface;
 use Remorhaz\UniLex\Lexer\Token;
 use Remorhaz\UniLex\Parser\Production;
@@ -15,7 +15,7 @@ class TranslationScheme implements TranslationSchemeInterface
 
     private $listener;
 
-    public function __construct(StreamListenerInterface $listener)
+    public function __construct(EventListenerInterface $listener)
     {
         $this->listener = $listener;
     }
