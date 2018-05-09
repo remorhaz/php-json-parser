@@ -1,7 +1,9 @@
 <?php
 
-namespace Remorhaz\JSON\Parser;
+namespace Remorhaz\JSON\Parser\Stream\Event;
 
+use Remorhaz\JSON\Parser\Stream\Event\StringScalar;
+use Remorhaz\JSON\Parser\Stream\Event\StringValueInterface;
 use Remorhaz\UniLex\Unicode\Utf8Encoder;
 
 class StringValue implements StringValueInterface

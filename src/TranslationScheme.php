@@ -2,6 +2,8 @@
 
 namespace Remorhaz\JSON\Parser;
 
+use Remorhaz\JSON\Parser\Stream\Event;
+use Remorhaz\JSON\Parser\Stream\StreamListenerInterface;
 use Remorhaz\UniLex\Grammar\SDD\TranslationSchemeInterface;
 use Remorhaz\UniLex\Lexer\Token;
 use Remorhaz\UniLex\Parser\Production;
@@ -414,7 +416,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $scalar = $production->getSymbol(0);
                 $this->copyDocumentPartToHeader($production, $scalar);
                 $documentPart = $this->createDocumentPart($scalar);
-                $bool = new BoolScalar($documentPart, false);
+                $bool = new Event\BoolScalar($documentPart, false);
                 $this->listener->onBool($bool);
                 break;
 
@@ -422,7 +424,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $scalar = $production->getSymbol(0);
                 $this->copyDocumentPartToHeader($production, $scalar);
                 $documentPart = $this->createDocumentPart($scalar);
-                $null = new NullScalar($documentPart);
+                $null = new Event\NullScalar($documentPart);
                 $this->listener->onNull($null);
                 break;
 
@@ -430,7 +432,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $scalar = $production->getSymbol(0);
                 $this->copyDocumentPartToHeader($production, $scalar);
                 $documentPart = $this->createDocumentPart($scalar);
-                $bool = new BoolScalar($documentPart, true);
+                $bool = new Event\BoolScalar($documentPart, true);
                 $this->listener->onBool($bool);
                 break;
 
@@ -453,9 +455,9 @@ class TranslationScheme implements TranslationSchemeInterface
                 $frac = $this->createStringValue($scalar, 's.number_frac');
                 $isExpNegative = $scalar->getAttribute('s.number_exp_negative');
                 $exp = $this->createStringValue($scalar, 's.number_exp');
-                $numberValue = new NumberValue($isNegative, $int, $frac, $isExpNegative, $exp);
+                $numberValue = new Event\NumberValue($isNegative, $int, $frac, $isExpNegative, $exp);
                 $documentPart = $this->createDocumentPart($scalar);
-                $number = new NumberScalar($documentPart, $numberValue);
+                $number = new Event\NumberScalar($documentPart, $numberValue);
                 $this->listener->onNumber($number);
                 break;
 
@@ -502,111 +504,111 @@ class TranslationScheme implements TranslationSchemeInterface
 
     /**
      * @param Symbol $symbol
-     * @return DocumentPartInterface
+     * @return Event\DocumentPartInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createDocumentPart(Symbol $symbol): DocumentPartInterface
+    private function createDocumentPart(Symbol $symbol): Event\DocumentPartInterface
     {
         $offset = $this->createOffset($symbol);
         $length = $this->createLength($symbol);
-        return new DocumentPart($offset, $length);
+        return new Event\DocumentPart($offset, $length);
     }
 
     /**
      * @param Symbol $startSymbol
      * @param Symbol $finishSymbol
-     * @return DocumentPartInterface
+     * @return Event\DocumentPartInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createDocumentPartBetween(Symbol $startSymbol, Symbol $finishSymbol): DocumentPartInterface
+    private function createDocumentPartBetween(Symbol $startSymbol, Symbol $finishSymbol): Event\DocumentPartInterface
     {
         $offset = $this->createOffset($startSymbol);
         $length = $this->createLengthBetween($startSymbol, $finishSymbol);
-        return new DocumentPart($offset, $length);
+        return new Event\DocumentPart($offset, $length);
     }
 
 
     /**
      * @param Symbol $symbol
-     * @return OffsetInterface
+     * @return Event\OffsetInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createOffset(Symbol $symbol): OffsetInterface
+    private function createOffset(Symbol $symbol): Event\OffsetInterface
     {
         $offsetInBytes = $symbol->getAttribute('s.byte_offset');
-        return new Offset($offsetInBytes);
+        return new Event\Offset($offsetInBytes);
     }
 
     /**
      * @param Symbol $symbol
-     * @return LengthInterface
+     * @return Event\LengthInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createLength(Symbol $symbol): LengthInterface
+    private function createLength(Symbol $symbol): Event\LengthInterface
     {
         $lengthInBytes = $symbol->getAttribute('s.byte_length');
-        return new Length($lengthInBytes);
+        return new Event\Length($lengthInBytes);
     }
 
     /**
      * @param Symbol $startSymbol
      * @param Symbol $finishSymbol
-     * @return LengthInterface
+     * @return Event\LengthInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createLengthBetween(Symbol $startSymbol, Symbol $finishSymbol): LengthInterface
+    private function createLengthBetween(Symbol $startSymbol, Symbol $finishSymbol): Event\LengthInterface
     {
         $offsetInBytes = $startSymbol->getAttribute('s.byte_offset');
         $lengthInBytes =
             $finishSymbol->getAttribute('s.byte_offset') +
             $finishSymbol->getAttribute('s.byte_length') - $offsetInBytes;
-        return new Length($lengthInBytes);
+        return new Event\Length($lengthInBytes);
     }
 
     /**
      * @param Symbol ...$symbolList
-     * @return LengthInterface
+     * @return Event\LengthInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createLengthSum(Symbol ...$symbolList): LengthInterface
+    private function createLengthSum(Symbol ...$symbolList): Event\LengthInterface
     {
         $sum = 0;
         foreach ($symbolList as $symbol) {
             $sum += $symbol->getAttribute('s.byte_length');
         }
-        return new Length($sum);
+        return new Event\Length($sum);
     }
 
     /**
      * @param Symbol $symbol
-     * @return StringInterface
+     * @return Event\StringInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createString(Symbol $symbol): StringInterface
+    private function createString(Symbol $symbol): Event\StringInterface
     {
         $documentPart = $this->createDocumentPart($symbol);
         $stringValue = $this->createStringValue($symbol, 's.text');
-        return new StringScalar($documentPart, $stringValue);
+        return new Event\StringScalar($documentPart, $stringValue);
     }
 
     /**
      * @param Symbol $symbol
      * @param string $attributeName
-     * @return StringValueInterface
+     * @return Event\StringValueInterface
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function createStringValue(Symbol $symbol, string $attributeName): StringValueInterface
+    private function createStringValue(Symbol $symbol, string $attributeName): Event\StringValueInterface
     {
         $text = $symbol->getAttribute($attributeName);
-        return new StringValue(...$text);
+        return new Event\StringValue(...$text);
     }
 
     /**
      * @param Production $production
-     * @param DocumentPartInterface $documentPart
+     * @param Event\DocumentPartInterface $documentPart
      * @throws \Remorhaz\UniLex\Exception
      */
-    private function setHeaderDocumentPart(Production $production, DocumentPartInterface $documentPart): void
+    private function setHeaderDocumentPart(Production $production, Event\DocumentPartInterface $documentPart): void
     {
         $production
             ->getHeader()

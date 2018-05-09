@@ -1,6 +1,8 @@
 <?php
 
-namespace Remorhaz\JSON\Parser;
+namespace Remorhaz\JSON\Parser\Stream\Event;
+
+use Remorhaz\JSON\Parser\Exception;
 
 class Length implements LengthInterface
 {

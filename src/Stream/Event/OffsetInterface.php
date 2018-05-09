@@ -1,6 +1,6 @@
 <?php
 
-namespace Remorhaz\JSON\Parser;
+namespace Remorhaz\JSON\Parser\Stream\Event;
 
 interface OffsetInterface
 {

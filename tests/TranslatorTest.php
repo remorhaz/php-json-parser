@@ -3,32 +3,26 @@
 namespace Remorhaz\JSON\Parser\Test;
 
 use PHPUnit\Framework\TestCase;
-use Remorhaz\JSON\Parser\AbstractStreamListener;
-use Remorhaz\JSON\Parser\BoolInterface;
-use Remorhaz\JSON\Parser\DocumentPartInterface;
-use Remorhaz\JSON\Parser\NullInterface;
-use Remorhaz\JSON\Parser\NumberInterface;
-use Remorhaz\JSON\Parser\OffsetInterface;
-use Remorhaz\JSON\Parser\ParserFactory;
-use Remorhaz\JSON\Parser\StringInterface;
+use Remorhaz\JSON\Parser\Stream\AbstractStreamListener;
+use Remorhaz\JSON\Parser\Stream\Event;
+use Remorhaz\JSON\Parser\Parser;
 
 /**
  * @covers \Remorhaz\JSON\Parser\TranslationScheme
- * @covers \Remorhaz\JSON\Parser\ParserFactory
+ * @covers \Remorhaz\JSON\Parser\Parser
  */
 class TranslatorTest extends TestCase
 {
 
     /**
-     * @throws \Remorhaz\UniLex\Exception
+     * @throws \Remorhaz\JSON\Parser\Exception
      */
     public function testTranslator(): void
     {
         //       0    5    10   15   20   25   30   35   40   45   50   55   60  * 65   70   75   80   85
         $json = '{"a":true, "b": [0, -1.2e+10, false, {"c": null, "d" : "One two \\n three"} ], "e":""}';
         $listener = $this->createStreamListener();
-        $parser = (new ParserFactory)->createFromString($json, $listener);
-        $parser->run();
+        (new Parser($listener))->parse($json);
         $actualLog = $listener->getLog();
         $expectedLog = [
             "BEGIN DOCUMENT",
@@ -89,17 +83,17 @@ class TranslatorTest extends TestCase
                 $this->log[] = "END DOCUMENT";
             }
 
-            public function onBeginObject(OffsetInterface $offset): void
+            public function onBeginObject(Event\OffsetInterface $offset): void
             {
                 $this->log[] = "BEGIN OBJECT [{$offset->inBytes()}]";
             }
 
-            public function onEndObject(DocumentPartInterface $part): void
+            public function onEndObject(Event\DocumentPartInterface $part): void
             {
                 $this->log[] = "END OBJECT [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]";
             }
 
-            public function onBeginProperty(StringInterface $name, int $index): void
+            public function onBeginProperty(Event\StringInterface $name, int $index): void
             {
                 $part = $name->getDocumentPart();
                 $this->log[] =
@@ -107,19 +101,22 @@ class TranslatorTest extends TestCase
                     "'{$name->asString()}'";
             }
 
-            public function onEndProperty(StringInterface $name, int $index, DocumentPartInterface $part): void
-            {
+            public function onEndProperty(
+                Event\StringInterface $name,
+                int $index,
+                Event\DocumentPartInterface $part
+            ): void {
                 $this->log[] =
                     "END PROPERTY [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]#{$index}: " .
                     "'{$name->asString()}'";
             }
 
-            public function onBeginArray(OffsetInterface $offset): void
+            public function onBeginArray(Event\OffsetInterface $offset): void
             {
                 $this->log[] = "BEGIN ARRAY [{$offset->inBytes()}]";
             }
 
-            public function onEndArray(DocumentPartInterface $part): void
+            public function onEndArray(Event\DocumentPartInterface $part): void
             {
                 $this->log[] = "END ARRAY [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]";
             }
@@ -129,13 +126,13 @@ class TranslatorTest extends TestCase
                 $this->log[] = "BEGIN ELEMENT #{$index}";
             }
 
-            public function onEndElement(int $index, DocumentPartInterface $part): void
+            public function onEndElement(int $index, Event\DocumentPartInterface $part): void
             {
                 $this->log[] =
                     "END ELEMENT [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]#{$index}";
             }
 
-            public function onString(StringInterface $string): void
+            public function onString(Event\StringInterface $string): void
             {
                 $part = $string->getDocumentPart();
                 $this->log[] =
@@ -143,7 +140,7 @@ class TranslatorTest extends TestCase
                     "'{$string->asString()}'";
             }
 
-            public function onBool(BoolInterface $bool): void
+            public function onBool(Event\BoolInterface $bool): void
             {
                 $part = $bool->getDocumentPart();
                 $boolText = $bool->asBool() ? 'true' : 'false';
@@ -152,13 +149,13 @@ class TranslatorTest extends TestCase
                     "{$boolText}";
             }
 
-            public function onNull(NullInterface $null): void
+            public function onNull(Event\NullInterface $null): void
             {
                 $part = $null->getDocumentPart();
                 $this->log[] = "SET NULL [{$part->getOffset()->inBytes()}({$part->getLength()->inBytes()})]: null";
             }
 
-            public function onNumber(NumberInterface $number): void
+            public function onNumber(Event\NumberInterface $number): void
             {
                 $part = $number->getDocumentPart();
                 $isNegativeText = $number->isNegative() ? '-' : '';
