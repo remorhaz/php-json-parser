@@ -3,6 +3,7 @@
 [![Latest Stable Version](https://poser.pugx.org/remorhaz/php-json-parser/v/stable)](https://packagist.org/packages/remorhaz/php-json-parser)
 [![Maintainability](https://api.codeclimate.com/v1/badges/aeb98ad24499cd187cd5/maintainability)](https://codeclimate.com/github/remorhaz/php-json-parser/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/aeb98ad24499cd187cd5/test_coverage)](https://codeclimate.com/github/remorhaz/php-json-parser/test_coverage)
+
 JSON (RFC 8259) streaming push-parser written in PHP.
 
 ## Requirements
