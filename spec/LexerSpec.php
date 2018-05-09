@@ -180,15 +180,17 @@ for ($i = 4; $i > 0; $i--) {
     if (0x30 <= $digit && $digit <= 0x39) {
         $digit -= 0x30;
     } elseif (0x61 <= $digit && $digit <= 0x66) {
-        $digit -= 0x51;
+        $digit -= 0x57;
     } else {
-        $digit -= 0x31;
+        $digit -= 0x37;
     }
     $symbol += $digit * pow(0x10, $power);
 }
-$isSurrogate = 0xD800 <= $symbol && $symbol <= 0xDFFF;
+$isHiSurrogate = 0xD800 <= $symbol && $symbol <= 0xDBFF;
+$isLoSurrogate = 0xDC00 <= $symbol && $symbol <= 0xDFFF;
 $context
     ->setNewToken(TokenType::HEX)
-    ->setTokenAttribute('json.text_char16', $symbol)
-    ->setTokenAttribute('json.text_is_utf16_surrogate', $isSurrogate)
+    ->setTokenAttribute('json.text_utf16', $symbol)
+    ->setTokenAttribute('json.text_is_hi_surrogate', $isHiSurrogate)
+    ->setTokenAttribute('json.text_is_lo_surrogate', $isLoSurrogate)
     ->setContext('string');

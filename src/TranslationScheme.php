@@ -13,6 +13,8 @@ use Remorhaz\UniLex\Unicode\Grammar\TokenAttribute;
 class TranslationScheme implements TranslationSchemeInterface
 {
 
+    private const REPLACEMENT_CHARACTER = 0xFFFD;
+
     private $listener;
 
     public function __construct(EventListenerInterface $listener)
@@ -46,19 +48,42 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_STRING . ".0.1":
-                $production->getSymbol(1)->setAttribute('i.text_prefix', []);
+                $production
+                    ->getSymbol(1)
+                    ->setAttribute('i.text_prefix', [])
+                    ->setAttribute('i.text_surrogate', 0)
+                    ->setAttribute('i.text_is_hi_surrogate', false);
+                break;
+
+            case SymbolType::NT_STRING_CONTENT . ".0.1":
+                $header = $production->getHeader();
+                $production
+                    ->getSymbol(1)
+                    ->setAttribute('i.text_surrogate', $header->getAttribute('i.text_surrogate'))
+                    ->setAttribute('i.text_is_hi_surrogate', $header->getAttribute('i.text_is_hi_surrogate'));
                 break;
 
             case SymbolType::NT_STRING_CONTENT . ".0.2":
                 $textPrefix = $production->getHeader()->getAttribute('i.text_prefix');
-                $text = $production->getSymbol(1)->getAttribute('s.text');
-                $production->getSymbol(2)->setAttribute('i.text_prefix', array_merge($textPrefix, $text));
+                $escaped = $production->getSymbol(1);
+                $text = $escaped->getAttribute('s.text');
+                $production
+                    ->getSymbol(2)
+                    ->setAttribute('i.text_prefix', array_merge($textPrefix, $text))
+                    ->setAttribute('i.text_surrogate', $escaped->getAttribute('s.text_surrogate'))
+                    ->setAttribute('i.text_is_hi_surrogate', $escaped->getAttribute('s.text_is_hi_surrogate'));
                 break;
 
             case SymbolType::NT_STRING_CONTENT . ".1.1":
-                $textPrefix = $production->getHeader()->getAttribute('i.text_prefix');
+                $header = $production->getHeader();
+                $textPrefix = $header->getAttribute('i.text_prefix');
+                $surrogate = $header->getAttribute('i.text_is_hi_surrogate') ? [0xFFFD] : [];
                 $text = $production->getSymbol(0)->getAttribute('s.text');
-                $production->getSymbol(1)->setAttribute('i.text_prefix', array_merge($textPrefix, $text));
+                $production
+                    ->getSymbol(1)
+                    ->setAttribute('i.text_prefix', array_merge($textPrefix, $surrogate, $text))
+                    ->setAttribute('i.text_surrogate', 0)
+                    ->setAttribute('i.text_is_hi_surrogate', false);
                 break;
 
             case SymbolType::NT_OBJECT . ".0.2":
@@ -189,8 +214,10 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_STRING_CONTENT . ".2":
-                $textPrefix = $production->getHeader()->getAttribute('i.text_prefix');
-                $production->getHeader()->setAttribute('s.text', $textPrefix);
+                $header = $production->getHeader();
+                $textPrefix = $header->getAttribute('i.text_prefix');
+                $surrogate = $header->getAttribute('i.text_is_hi_surrogate') ? [self::REPLACEMENT_CHARACTER] : [];
+                $header->setAttribute('s.text', array_merge($textPrefix, $surrogate));
                 break;
 
             case SymbolType::NT_ESCAPED . ".0":
@@ -202,7 +229,40 @@ class TranslationScheme implements TranslationSchemeInterface
             case SymbolType::NT_ESCAPED . ".6":
             case SymbolType::NT_ESCAPED . ".7":
                 $text = $production->getSymbol(0)->getAttribute('s.text');
-                $production->getHeader()->setAttribute('s.text', $text);
+                $production
+                    ->getHeader()
+                    ->setAttribute('s.text', $text)
+                    ->setAttribute('s.text_is_hi_surrogate', false)
+                    ->setAttribute('s.text_is_lo_surrogate', false)
+                    ->setAttribute('s.text_surrogate', 0);
+                break;
+
+            case SymbolType::NT_ESCAPED . ".8":
+                $hex = $production->getSymbol(0);
+                $char = $hex->getAttribute('s.text_utf16');
+                $isHiSurrogate = $hex->getAttribute('s.text_is_hi_surrogate');
+                $isLoSurrogate = $hex->getAttribute('s.text_is_lo_surrogate');
+                $header = $production->getHeader();
+                $isAfterHiSurrogate = $header->getAttribute('i.text_is_hi_surrogate');
+                if ($isAfterHiSurrogate) {
+                    if ($isLoSurrogate) {
+                        $surrogate = $header->getAttribute('i.text_surrogate');
+                        $symbol = 0x10000 + (($surrogate & 0x03FF) << 0x0A | $char & 0x03FF);
+                        $textPrefix = [$symbol];
+                    } else {
+                        $textPrefix = [self::REPLACEMENT_CHARACTER];
+                    }
+                } else {
+                    $textPrefix = [];
+                }
+                $text = $isHiSurrogate || $isAfterHiSurrogate
+                    ? []
+                    : [$isLoSurrogate ? self::REPLACEMENT_CHARACTER : $char];
+                $header
+                    ->setAttribute('s.text', array_merge($textPrefix, $text))
+                    ->setAttribute('s.text_is_hi_surrogate', $isHiSurrogate)
+                    ->setAttribute('s.text_is_lo_surrogate', $isLoSurrogate)
+                    ->setAttribute('s.text_surrogate', $char);
                 break;
 
             case SymbolType::NT_OBJECT_MEMBER . ".0":
@@ -496,6 +556,13 @@ class TranslationScheme implements TranslationSchemeInterface
                 if ('stringEsc' == $token->getAttribute('json.context')) {
                     $symbol->setAttribute('s.text', $token->getAttribute('json.text'));
                 }
+                break;
+
+            case TokenType::HEX:
+                $symbol
+                    ->setAttribute('s.text_utf16', $token->getAttribute('json.text_utf16'))
+                    ->setAttribute('s.text_is_hi_surrogate', $token->getAttribute('json.text_is_hi_surrogate'))
+                    ->setAttribute('s.text_is_lo_surrogate', $token->getAttribute('json.text_is_lo_surrogate'));
                 break;
         }
     }

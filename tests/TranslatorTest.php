@@ -100,7 +100,47 @@ class TranslatorTest extends TestCase
             "SET STRING [0(6)]: 'a\"b'",
             "END DOCUMENT",
         ];
-        $data["String with quoted quotation mark"] = [$json, $expectedLog];
+        $data["String with escaped quotation mark"] = [$json, $expectedLog];
+
+        $json = '"a\\u0062c"';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET STRING [0(10)]: 'abc'",
+            "END DOCUMENT",
+        ];
+        $data["String with escaped UTF-16 symbol"] = [$json, $expectedLog];
+
+        $json = '"a\\uD834\\uDD1Ec"';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET STRING [0(16)]: 'a𝄞c'",
+            "END DOCUMENT",
+        ];
+        $data["String with escaped UTF-16 surrogate pair"] = [$json, $expectedLog];
+
+        $json = '"a\\uDD1E\\uD834c"';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET STRING [0(16)]: 'a��c'",
+            "END DOCUMENT",
+        ];
+        $data["String with escaped UTF-16 surrogate pair in wrong order"] = [$json, $expectedLog];
+
+        $json = '"a\\uD834"';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET STRING [0(9)]: 'a�'",
+            "END DOCUMENT",
+        ];
+        $data["String with single escaped UTF-16 hi-surrogate at the end"] = [$json, $expectedLog];
+
+        $json = '"a\\uD834\\uD834c"';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET STRING [0(16)]: 'a��c'",
+            "END DOCUMENT",
+        ];
+        $data["String with two escaped UTF-16 hi-surrogates"] = [$json, $expectedLog];
 
         return $data;
     }
