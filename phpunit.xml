@@ -8,12 +8,14 @@
     <testsuites>
         <testsuite name="all">
             <directory>tests/</directory>
+            <directory>examples/tests/</directory>
         </testsuite>
     </testsuites>
     <filter>
         <whitelist
             processUncoveredFilesFromWhitelist="true">
             <directory suffix=".php">src/</directory>
+            <directory suffix=".php">examples/src/</directory>
             <directory suffix=".php">generated/</directory>
         </whitelist>
     </filter>

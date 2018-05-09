@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ruleset name="UniLex">
-    <description>The coding standards for UniLex library.</description>
+    <description>The coding standards for PHP JSON streaming push-parser library.</description>
 
     <file>src</file>
+    <file>examples</file>
     <file>tests</file>
     <file>generated</file>
 
