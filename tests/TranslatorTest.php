@@ -15,15 +15,24 @@ class TranslatorTest extends TestCase
 {
 
     /**
+     * @param string $json
+     * @param string[] $expectedLog
      * @throws \Remorhaz\JSON\Parser\Exception
+     * @dataProvider providerJsonLog
      */
-    public function testTranslator(): void
+    public function testTranslator(string $json, array $expectedLog): void
     {
-        //       0    5    10   15   20   25   30   35   40   45   50   55   60  * 65   70   75   80   85
-        $json = '{"a":true, "b": [0, -1.2e+10, false, {"c": null, "d" : "One two \\n three"} ], "e":""}';
         $listener = $this->createStreamListener();
         (new Parser($listener))->parse($json);
         $actualLog = $listener->getLog();
+        self::assertSame($expectedLog, $actualLog);
+    }
+
+    public function providerJsonLog(): array
+    {
+        $data = [];
+        //       0    5    10   15   20   25   30   35   40   45   50   55   60  * 65   70   75   80   85
+        $json = '{"a":true, "b": [0, -1.2e+10, false, {"c": null, "d" : "One two \\n three"} ], "e":""}';
         $expectedLog = [
             "BEGIN DOCUMENT",
             "BEGIN OBJECT [0]",
@@ -59,7 +68,41 @@ class TranslatorTest extends TestCase
             "END OBJECT [0(85)]",
             "END DOCUMENT",
         ];
-        self::assertSame($expectedLog, $actualLog);
+        $data["Mixed JSON"] = [$json, $expectedLog];
+
+        $json = '1.003';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET NUMBER [0(5)]: 1.003",
+            "END DOCUMENT",
+        ];
+        $data["Number with zero-prefixed fractal part"] = [$json, $expectedLog];
+
+        $json = '0e00';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET NUMBER [0(4)]: 0e00",
+            "END DOCUMENT",
+        ];
+        $data["Number with unsigned zero exponential part"] = [$json, $expectedLog];
+
+        $json = '1e-23';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET NUMBER [0(5)]: 1e-23",
+            "END DOCUMENT",
+        ];
+        $data["Number with negative exponential part"] = [$json, $expectedLog];
+
+        $json = '"a\\"b"';
+        $expectedLog = [
+            "BEGIN DOCUMENT",
+            "SET STRING [0(6)]: 'a\"b'",
+            "END DOCUMENT",
+        ];
+        $data["String with quoted quotation mark"] = [$json, $expectedLog];
+
+        return $data;
     }
 
     private function createStreamListener()

@@ -287,7 +287,6 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_DIGIT . ".0":
-                $textPrefix = $production->getHeader()->getAttribute('i.number_int');
                 $zero = $production->getSymbol(0);
                 $digit = $production->getSymbol(1);
                 $text = $digit->getAttribute('s.number_int');
@@ -295,7 +294,7 @@ class TranslationScheme implements TranslationSchemeInterface
                 $production
                     ->getHeader()
                     ->setAttribute('s.byte_length', $length->inBytes())
-                    ->setAttribute('s.number_int', array_merge($textPrefix, [0x30], $text));
+                    ->setAttribute('s.number_int', $text);
                 break;
 
             case SymbolType::NT_DIGIT . ".1":
@@ -310,14 +309,13 @@ class TranslationScheme implements TranslationSchemeInterface
                 break;
 
             case SymbolType::NT_OPT_DIGIT . ".0":
-                $textPrefix = $production->getHeader()->getAttribute('i.number_int');
                 $digit = $production->getSymbol(0);
                 $text = $digit->getAttribute('s.number_int');
                 $length = $digit->getAttribute('s.byte_length');
                 $production
                     ->getHeader()
                     ->setAttribute('s.byte_length', $length)
-                    ->setAttribute('s.number_int', array_merge($textPrefix, $text));
+                    ->setAttribute('s.number_int', $text);
                 break;
 
             case SymbolType::NT_OPT_DIGIT . ".1":
