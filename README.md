@@ -24,7 +24,7 @@ Then you pass your listener instance as an argument to `Remorhaz\JSON\Parser\Par
 
 ### Example
 Let's create a simple listener that concatenates all string values from given JSON string.
-```
+```php
 <?php
 
 namespace Remorhaz\JSON\Parser\Example;
@@ -67,7 +67,7 @@ class StringConcatenator extends AbstractEventListener
 }
 ```
 Now let's check how it works:
-```
+```php
 <?php
 
 namespace Remorhaz\JSON\Parser\Example\Test;
