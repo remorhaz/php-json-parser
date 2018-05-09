@@ -7,7 +7,7 @@
 JSON (RFC 8259) streaming push-parser written in PHP.
 
 ## Requirements
-* PHP 7.1
+* PHP 7.1+
 
 ## License
 This library is licensed under MIT license.
